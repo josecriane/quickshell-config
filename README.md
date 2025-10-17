@@ -68,6 +68,7 @@ This configuration is packaged as a Nix flake with:
   - [ ] Add notificationTime
   - [ ] Don't hide notification when hover
   - [ ] Group notifications
+- [ ] Add material-icon into the flake
 
 ## Troubleshooting
 

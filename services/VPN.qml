@@ -194,12 +194,10 @@ Singleton {
 
     // Public methods
     function connect() {
-        console.log("connect() called, serviceName:", root.serviceName);
         if (connecting || connected) return;
 
         connecting = true;
         errorMessage = "";
-        console.log("Starting connectProcess with service:", root.serviceName);
         connectProcess.running = true;
     }
 
@@ -238,22 +236,18 @@ Singleton {
 
     // Connect to a specific VPN service
     function connectToService(serviceName) {
-        console.log("connectToService called with:", serviceName);
         if (connecting || connected) {
-            console.log("Already connecting or connected, returning");
             return;
         }
 
         // Update current service
         root.serviceName = serviceName;
-        console.log("Set root.serviceName to:", root.serviceName);
 
         // Find the connection name from the list
         const connection = connections.find(conn => conn.serviceName === serviceName);
         if (connection) {
             connectionName = connection.connectionName;
             activeConnection = serviceName;
-            console.log("Found connection:", connection.connectionName);
         }
 
         connect();

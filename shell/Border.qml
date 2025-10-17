@@ -16,7 +16,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: Foundations.palette.base01
+        color: Qt.alpha(Foundations.palette.base01, 0.95)
         layer.enabled: true
 
         layer.effect: MultiEffect {

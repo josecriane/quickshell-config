@@ -156,7 +156,6 @@ ColumnLayout {
 
         onTriggered: {
             if (root.connectingToSsid === ssid && (!Network.active || Network.active.ssid !== ssid)) {
-                console.log("Connection failed for", ssid, "- showing password dialog");
                 root.connectingToSsid = "";
                 root.pendingSsid = ssid;
                 root.showPasswordDialog = true;

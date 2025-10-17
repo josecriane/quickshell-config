@@ -56,6 +56,19 @@ Rectangle {
             if (event.button !== Qt.LeftButton)
                 return;
 
+            const searchId = root.notification.desktopEntry || root.appName;
+            const titleHint = root.summary;
+
+            if (searchId) {
+                Niri.getWindowByAppId(searchId, (window) => {
+                    if (window && window.id) {
+                        Niri.focusWindowById(window.id);
+                    } else {
+                        console.log("No matching window found for:", searchId);
+                    }
+                }, titleHint);
+            }
+
             switch (root.notification.actions.length) {
                 case 0:
                     root.notification.dismiss()
@@ -171,7 +184,7 @@ Rectangle {
                         sourceComponent: Icons.MaterialFontIcon {
                             color: root.isCritical ? Foundations.palette.base08 : Foundations.palette.base07
                             font.pointSize: Foundations.font.size.l
-                            text: IconsService.getNotifIcon(root.isCritical ? "critical" : root.summaryStr)
+                            text: IconsService.getNotifIcon(root.isCritical ? "critical" : root.summary)
                         }
                     }
                 }

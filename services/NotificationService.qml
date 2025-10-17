@@ -10,11 +10,11 @@ import QtQuick
 Singleton {
     id: root
 
-    // TODO: Redesign using direct Notification objects
     readonly property list<Notification> notifications: server.trackedNotifications.values
     property list<Notification> popups: []
 
     property int defaultExpireTimeout: 5000
+    property bool doNotDisturb: false
 
     function clearNotifications() {
         root.popups = []
@@ -35,10 +35,10 @@ Singleton {
         onNotification: notification => {
             notification.tracked = true;
 
-            if (!ScreenShare.isSharing) {
+            if (!ScreenShare.isSharing && !root.doNotDisturd) {
                 root.popups.push(notification)
             }
-            
+
             // Connect to notification closed signal to clean up
             notification.closed.connect(() => {
                 const index = root.popups.indexOf(notification);
@@ -46,7 +46,7 @@ Singleton {
                     root.popups.splice(index, 1);
                 }
             });
-            
+
             const timer = timerComponent.createObject(notification, {
                 interval: notification.expireTimeout > 0 ? notification.expireTimeout : root.defaultExpireTimeout,
                 notification: notification
@@ -57,10 +57,10 @@ Singleton {
 
     Component {
         id: timerComponent
-        
+
         Timer {
             property var notification
-            
+
             repeat: false
             onTriggered: {
                 const index = root.popups.indexOf(notification);
