@@ -101,7 +101,10 @@
               src = ./.;
 
               nativeBuildInputs = [ pkgs.makeWrapper ];
-              buildInputs = [ quickshellPkg ];
+              buildInputs = [
+                quickshellPkg
+                pkgs.material-symbols
+              ];
 
               installPhase = ''
                 # Copy all configuration files
@@ -181,10 +184,15 @@
                 # Create wrapper scripts
                 mkdir -p $out/bin
 
+                # Create fonts directory and symlink the fonts
+                mkdir -p $out/share/fonts
+                ln -s ${pkgs.material-symbols}/share/fonts/TTF $out/share/fonts/
+
                 # Main quickshell wrapper
                 makeWrapper ${quickshellPkg}/bin/quickshell $out/bin/quickshell-config \
+                  --add-flags "--config $out/share/quickshell-config" \
                   --prefix QML2_IMPORT_PATH : "${quickshellPkg}/lib/qt-6/qml" \
-                  --add-flags "-c $out/share/quickshell-config"
+                  --prefix XDG_DATA_DIRS : "$out/share:${pkgs.material-symbols}/share"
 
                 # Launcher toggle script
                 cat > $out/bin/qs-toggle-launcher << EOF
