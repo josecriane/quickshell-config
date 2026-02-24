@@ -86,7 +86,6 @@ Rectangle {
                 }
 
                 Text.BodyM {
-                    anchors.centerIn: parent
                     color: root.colour
                     font.family: Foundations.font.family.mono
                     text: {
@@ -113,7 +112,6 @@ Rectangle {
                 onClicked: Network.toggleWifi()
 
                 MaterialFontIcon {
-                    anchors.centerIn: parent
                     animate: true
                     color: root.colour
                     text: {
@@ -135,7 +133,6 @@ Rectangle {
                 onClicked: VPN.toggle()
 
                 Item {
-                    anchors.centerIn: parent
                     implicitWidth: vpnIcon.implicitWidth
                     implicitHeight: vpnIcon.implicitHeight
 
@@ -202,7 +199,6 @@ Rectangle {
                     }
 
                     MaterialFontIcon {
-                        anchors.centerIn: parent
                         animate: true
                         color: root.colour
                         text: {
@@ -259,7 +255,6 @@ Rectangle {
                 onClicked: Quickshell.execDetached(["gnome-power-statistics"])
 
                 MaterialFontIcon {
-                    anchors.centerIn: parent
                     animate: true
                     color: !UPower.onBattery || UPower.displayDevice.percentage > 0.2 ? root.colour : Foundations.palette.base08
                     text: {
