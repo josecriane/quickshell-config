@@ -196,6 +196,13 @@ Singleton {
     function connect() {
         if (connecting || connected) return;
 
+        if (serviceName === "" && connections.length > 0) {
+            root.serviceName = connections[0].serviceName;
+        } else if (serviceName === "") {
+            errorMessage = "No VPN service configured";
+            return;
+        }
+
         connecting = true;
         errorMessage = "";
         connectProcess.running = true;
@@ -203,6 +210,11 @@ Singleton {
 
     function disconnect() {
         if (connecting || !connected) return;
+
+        if (serviceName === "") {
+            errorMessage = "No VPN service configured";
+            return;
+        }
 
         connecting = true;
         errorMessage = "";
