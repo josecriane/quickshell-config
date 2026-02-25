@@ -26,6 +26,10 @@ ListView {
         prefix: ">"
         commandList: ConfigsJson.interactiveCommands
     }
+
+    property LauncherServices.KeePassXC keepassxcLauncher: LauncherServices.KeePassXC {
+        prefix: "?"
+    }
     required property string searchText
     required property PersistentProperties visibilities
 
@@ -69,6 +73,11 @@ ListView {
 
         if (text.startsWith(sessionCommandsPrefix)) {
             return "sessionCommands";
+        }
+
+        const keepassxcPrefix = "?";
+        if (text.startsWith(keepassxcPrefix)) {
+            return "keepassxc";
         }
 
         return "apps";
@@ -145,6 +154,14 @@ ListView {
 
             PropertyChanges {
                 model.values: root.sessionCommandsLauncher.search(root.searchText)
+                root.delegate: actionItem
+            }
+        },
+        State {
+            name: "keepassxc"
+
+            PropertyChanges {
+                model.values: root.keepassxcLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },

@@ -93,6 +93,7 @@
               interactiveCommandsPath ? null,
               stylix ? null,
               excludedAppsPath ? null,
+              keepassPath ? null,
             }:
             pkgs.stdenv.mkDerivation rec {
               pname = "quickshell-config";
@@ -181,6 +182,19 @@
                     ''
                 }
 
+                ${
+                  if keepassPath != null then
+                    ''cp ${keepassPath} $out/share/quickshell-config/keepass.json''
+                  else
+                    ''
+                      if [ -f keepass.json ]; then
+                        cp keepass.json $out/share/quickshell-config/keepass.json
+                      else
+                        echo '{}' > $out/share/quickshell-config/keepass.json
+                      fi
+                    ''
+                }
+
                 # Create wrapper scripts
                 mkdir -p $out/bin
 
@@ -224,6 +238,7 @@
               interactiveCommandsPath ? null,
               stylix ? null,
               excludedAppsPath ? null,
+              keepassPath ? null,
             }:
             mkQuickshellConfig {
               inherit
@@ -232,6 +247,7 @@
                 interactiveCommandsPath
                 stylix
                 excludedAppsPath
+                keepassPath
                 ;
             };
         }

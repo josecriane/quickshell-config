@@ -11,6 +11,7 @@ Singleton {
     property alias sessionCommands: sessionCommandsAdapter.commands
     property alias interactiveCommands: interactiveCommandsAdapter.commands
     property alias excludedDesktops: excludedDesktopsAdapter.excludedApps
+    property alias keepass: keepassAdapter
 
     property FileView commandsFile: FileView {
         path: `${Quickshell.shellDir}/commands.json`
@@ -54,6 +55,18 @@ Singleton {
             id: excludedDesktopsAdapter
 
             property var excludedApps: []
+        }
+    }
+
+    property FileView keepassFile: FileView {
+        path: `${Quickshell.shellDir}/keepass.json`
+        watchChanges: true
+
+        JsonAdapter {
+            id: keepassAdapter
+
+            property string masterPasswordPath: ""
+            property string databasePath: ""
         }
     }
 }
