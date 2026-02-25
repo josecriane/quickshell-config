@@ -25,17 +25,17 @@ Singleton {
 
     function getWindowByAppId(appId: string, callback: var, titleHint: string): void {
         const hint = titleHint || "";
-        windowQueryComponent.createObject(root, {
-            targetAppId: appId.toLowerCase(),
-            titleHint: hint.toLowerCase(),
-            resultCallback: callback
-        });
+        getWindowIdProcess.running = false;
+        getWindowIdProcess.targetAppId = appId.toLowerCase();
+        getWindowIdProcess.titleHint = hint.toLowerCase();
+        getWindowIdProcess.resultCallback = callback;
+        getWindowIdProcess.running = true;
     }
 
     function focusWindowById(windowId: int): void {
-        focusWindowComponent.createObject(root, {
-            windowId: windowId
-        });
+        focusWindowProcess.command = ["niri", "msg", "action", "focus-window", "--id", windowId.toString()];
+        focusWindowProcess.running = false;
+        focusWindowProcess.running = true;
     }
 
     function spawn(command: string): void {
@@ -160,75 +160,87 @@ Singleton {
         }
     }
 
-    Component {
-        id: windowQueryComponent
+    Process {
+        id: getWindowIdProcess
 
-        Process {
-            property string targetAppId
-            property string titleHint
-            property var resultCallback
+        property string targetAppId
+        property string titleHint
+        property var resultCallback
 
-            command: ["niri", "msg", "-j", "windows"]
-            running: true
+        command: ["niri", "msg", "-j", "windows"]
+        running: false
 
-            stdout: StdioCollector {
-                onStreamFinished: {
-                    try {
-                        const windows = JSON.parse(text.trim());
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const windows = JSON.parse(text.trim());
+                    const knownBrowsers = ["chromium-browser", "chromium", "google-chrome", "google-chrome-stable", "firefox", "firefox-esr"];
+                    const isBrowser = knownBrowsers.includes(getWindowIdProcess.targetAppId);
 
-                        // Find window matching the target app_id
-                        // Strategy:
-                        // 1. Exact app_id match (most reliable)
-                        // 2. If titleHint provided and we have PWA-like windows, match by title
-                        // 3. Fallback: don't match (to avoid focusing wrong PWA)
+                    // Strategy 1: For browser notifications with titleHint,
+                    // try to find the specific PWA window first.
+                    if (isBrowser && getWindowIdProcess.titleHint && getWindowIdProcess.titleHint.length > 0) {
+                        const hintWords = getWindowIdProcess.titleHint.split(/\s+/).filter(w => w.length > 2);
+
+                        // Check PWA app_ids for keyword matches
+                        // E.g. appName "Google Chat" → "chat" matches "chrome-chat.google.com__-Default"
                         for (let i = 0; i < windows.length; i++) {
                             const window = windows[i];
                             const windowAppId = (window.app_id || "").toLowerCase();
-
-                            if (windowAppId === targetAppId) {
-                                resultCallback(window);
-                                return;
-                            }
-                        }
-
-                        if (titleHint && titleHint.length > 0) {
-                            const searchPrefix = targetAppId.replace("google-", "").replace("-", "");
-
-                            for (let i = 0; i < windows.length; i++) {
-                                const window = windows[i];
-                                const windowAppId = (window.app_id || "").toLowerCase();
-                                const windowTitle = (window.title || "").toLowerCase();
-
-                                if (windowAppId.startsWith(searchPrefix + "-")) {
-                                    const hintWords = titleHint.split(/\s+/).filter(w => w.length > 3);
-                                    for (const word of hintWords) {
-                                        if (windowTitle.includes(word)) {
-                                            resultCallback(window);
-                                            return;
-                                        }
-                                    }
+                            if (windowAppId.startsWith("chrome-") && windowAppId !== getWindowIdProcess.targetAppId) {
+                                const matches = hintWords.filter(w => windowAppId.includes(w)).length;
+                                if (matches > 0) {
+                                    getWindowIdProcess.resultCallback(window);
+                                    return;
                                 }
                             }
                         }
 
-                        resultCallback(null);
-                    } catch (e) {
-                        console.log("Error parsing windows JSON:", e);
-                        resultCallback(null);
+                        // Check window titles for appName
+                        for (let i = 0; i < windows.length; i++) {
+                            const window = windows[i];
+                            const windowTitle = (window.title || "").toLowerCase();
+                            if (windowTitle.includes(getWindowIdProcess.titleHint)) {
+                                getWindowIdProcess.resultCallback(window);
+                                return;
+                            }
+                        }
                     }
+
+                    // Strategy 2: Exact app_id match
+                    for (let i = 0; i < windows.length; i++) {
+                        const window = windows[i];
+                        const windowAppId = (window.app_id || "").toLowerCase();
+                        if (windowAppId === getWindowIdProcess.targetAppId) {
+                            getWindowIdProcess.resultCallback(window);
+                            return;
+                        }
+                    }
+
+                    // Strategy 3: Title-based fallback for non-browser apps
+                    if (getWindowIdProcess.titleHint && getWindowIdProcess.titleHint.length > 0) {
+                        for (let i = 0; i < windows.length; i++) {
+                            const window = windows[i];
+                            const windowTitle = (window.title || "").toLowerCase();
+                            if (windowTitle.includes(getWindowIdProcess.titleHint)) {
+                                getWindowIdProcess.resultCallback(window);
+                                return;
+                            }
+                        }
+                    }
+
+                    getWindowIdProcess.resultCallback(null);
+                } catch (e) {
+                    console.log("Error parsing windows JSON:", e);
+                    getWindowIdProcess.resultCallback(null);
                 }
             }
         }
     }
 
-    Component {
-        id: focusWindowComponent
+    Process {
+        id: focusWindowProcess
 
-        Process {
-            property int windowId
-
-            command: ["niri", "msg", "action", "focus-window", "--id", windowId.toString()]
-            running: true
-        }
+        running: false
     }
 }

@@ -65,7 +65,7 @@ FocusScope {
                         if (window && window.id) {
                             Niri.focusWindowById(window.id);
                         }
-                    }, notification.summary || "");
+                    }, notification.appName || notification.summary || "");
                 }
             }
         }

@@ -183,7 +183,7 @@ Item {
                     cursorShape: model.isFocused ? Qt.ArrowCursor : Qt.PointingHandCursor
                     onClicked: {
                         if (!model.isFocused) {
-                            Niri.focusWorkspace(model.id);
+                            Niri.focusWorkspace(model.idx);
                         }
                     }
                 }

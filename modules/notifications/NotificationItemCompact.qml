@@ -61,25 +61,32 @@ Rectangle {
 
         onClicked: {
             const searchId = root.notification.desktopEntry || root.notification.appName;
-            const titleHint = root.summary;
+            const titleHint = root.notification.appName || root.summary;
 
-            if (!searchId) {
-                root.clickState = "notfound";
-                feedbackTimer.restart();
-                return;
+            if (searchId) {
+                root.clickState = "searching";
+
+                Niri.getWindowByAppId(searchId, (window) => {
+                    if (window && window.id) {
+                        root.clickState = "found";
+                        Niri.focusWindowById(window.id);
+                    } else {
+                        root.clickState = "notfound";
+                    }
+                    feedbackTimer.restart();
+                }, titleHint);
             }
 
-            root.clickState = "searching";
-
-            Niri.getWindowByAppId(searchId, (window) => {
-                if (window && window.id) {
-                    root.clickState = "found";
-                    Niri.focusWindowById(window.id);
-                } else {
-                    root.clickState = "notfound";
+            // Invoke the notification's default action (tells the app to focus the right window)
+            for (let i = 0; i < root.notification.actions.length; i++) {
+                if (root.notification.actions[i].identifier === "default") {
+                    root.notification.actions[i].invoke();
+                    return;
                 }
-                feedbackTimer.restart();
-            }, titleHint);
+            }
+            if (root.notification.actions.length === 0) {
+                root.notification.dismiss();
+            }
         }
     }
 

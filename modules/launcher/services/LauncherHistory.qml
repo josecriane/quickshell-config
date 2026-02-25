@@ -7,7 +7,7 @@ import QtQuick
 Singleton {
     id: root
 
-    readonly property string historyPath: `${Quickshell.workingDirectory}/.cache/launcher-history.json`
+    readonly property string historyPath: `${Quickshell.env("HOME")}/.cache/quickshell/launcher-history.json`
     property var launchCounts: ({})
     property bool loaded: false
 

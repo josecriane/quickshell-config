@@ -82,26 +82,32 @@ Rectangle {
 
             // Try to focus window by desktopEntry first, then appName
             const searchId = root.notification.desktopEntry || root.appName;
-            // Use notification summary as a hint for title matching (useful for PWAs)
-            const titleHint = root.summary;
+            const titleHint = root.appName || root.summary;
 
-            if (!searchId) {
-                root.clickState = "notfound";
-                feedbackTimer.restart();
-                return;
+            if (searchId) {
+                root.clickState = "searching";
+
+                Niri.getWindowByAppId(searchId, (window) => {
+                    if (window && window.id) {
+                        root.clickState = "found";
+                        Niri.focusWindowById(window.id);
+                    } else {
+                        root.clickState = "notfound";
+                    }
+                    feedbackTimer.restart();
+                }, titleHint);
             }
 
-            root.clickState = "searching";
-
-            Niri.getWindowByAppId(searchId, (window) => {
-                if (window && window.id) {
-                    root.clickState = "found";
-                    Niri.focusWindowById(window.id);
-                } else {
-                    root.clickState = "notfound";
+            // Invoke the notification's default action (tells the app to focus the right window)
+            for (let i = 0; i < root.notification.actions.length; i++) {
+                if (root.notification.actions[i].identifier === "default") {
+                    root.notification.actions[i].invoke();
+                    return;
                 }
-                feedbackTimer.restart();
-            }, titleHint);
+            }
+            if (root.notification.actions.length === 0) {
+                root.notification.dismiss();
+            }
         }
 
         Item {
@@ -215,7 +221,7 @@ Rectangle {
                 }
             }
 
-            DsText.BodyL {
+            DsText.BodyM {
                 id: summaryView
 
                 anchors.left: mainImage.right
@@ -234,7 +240,7 @@ Rectangle {
                 font.pointSize: summaryView.font.pointSize
                 text: root.summary
             }
-            DsText.BodyM {
+            DsText.BodyS {
                 id: body
 
                 anchors.left: summaryView.left

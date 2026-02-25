@@ -64,13 +64,13 @@ Rectangle {
 
             // App icon
             Loader {
-                active: root.group.appIcon !== ""
+                active: (root.group?.appIcon ?? "") !== ""
                 Layout.preferredWidth: 20
                 Layout.preferredHeight: 20
 
                 sourceComponent: IconImage {
                     asynchronous: true
-                    source: Quickshell.iconPath(root.group.appIcon)
+                    source: Quickshell.iconPath(root.group?.appIcon ?? "")
                 }
             }
 

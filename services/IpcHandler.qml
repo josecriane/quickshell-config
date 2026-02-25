@@ -152,8 +152,8 @@ Scope {
                 output: focused.output
             });
         }
-        function focus(id: string): void {
-            Niri.focusWorkspace(parseInt(id));
+        function focus(idx: string): void {
+            Niri.focusWorkspace(parseInt(idx));
         }
         function list(): string {
             const ws = Niri.workspaces || [];
