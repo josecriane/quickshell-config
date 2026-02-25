@@ -107,6 +107,8 @@ Variants {
                 property bool bar
                 property bool launcher
                 property bool notifications
+                property string searchText: ""
+                property var launcherList: null
 
                 readonly property bool captureKeyboard: launcher | notifications | panels.popouts.needsFocus
 

@@ -146,6 +146,16 @@ Item {
         }
     }
 
+    // Absolutely positioned launcher toggle, centered on screen
+    LauncherToggle {
+        id: launcherToggle
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        innerHeight: root.innerHeight
+        visibilities: root.visibilities
+    }
+
     component WrappedLoader: Loader {
         property string id
 

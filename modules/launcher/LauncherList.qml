@@ -26,10 +26,9 @@ ListView {
         prefix: ">"
         commandList: ConfigsJson.interactiveCommands
     }
-    required property TextField search
+    required property string searchText
     required property PersistentProperties visibilities
 
-    // ToDo: review
     property int itemHeight: 57
     property int maxShown: 8
     property int margin: Foundations.spacing.s
@@ -47,7 +46,7 @@ ListView {
     orientation: Qt.Vertical
 
     state: {
-        const text = search.text;
+        const text = searchText;
         const actionsPrefix = ">";
         const commandsPrefix = "!";
         const sessionCommandsPrefix = "#";
@@ -121,7 +120,7 @@ ListView {
             name: "apps"
 
             PropertyChanges {
-                model.values: LauncherServices.Apps.search(search.text)
+                model.values: LauncherServices.Apps.search(root.searchText)
                 root.delegate: appItem
             }
         },
@@ -129,7 +128,7 @@ ListView {
             name: "actions"
 
             PropertyChanges {
-                model.values: root.actionsLauncher.search(search.text)
+                model.values: root.actionsLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },
@@ -137,7 +136,7 @@ ListView {
             name: "commands"
 
             PropertyChanges {
-                model.values: root.commandsLauncher.search(search.text)
+                model.values: root.commandsLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },
@@ -145,7 +144,7 @@ ListView {
             name: "sessionCommands"
 
             PropertyChanges {
-                model.values: root.sessionCommandsLauncher.search(search.text)
+                model.values: root.sessionCommandsLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },

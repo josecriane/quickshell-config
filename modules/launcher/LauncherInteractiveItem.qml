@@ -17,7 +17,7 @@ LauncherItem {
     property alias hintButton: hintButton
     property string hintIcon: "open_in_new"
     property string hintText: qsTr("Open")
-    readonly property string input: list.search.text.slice(commandPrefix.length)
+    readonly property string input: visibilities.searchText.slice(commandPrefix.length)
     property bool isError: false
     required property var list
     property var onHintClicked: function () {

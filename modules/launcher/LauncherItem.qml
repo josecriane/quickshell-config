@@ -18,7 +18,7 @@ Item {
 
     function activate(): void {
         if (root.modelData.autocompleteText) {
-            root.list.search.text = root.modelData.autocompleteText;
+            root.visibilities.searchText = root.modelData.autocompleteText;
         }
 
         if (root.modelData.onActivate) {

@@ -17,9 +17,17 @@ Item {
     property int itemWidth: 600
     required property int padding
     required property var panels
-    required property TextField search
+    required property string searchText
     required property PersistentProperties visibilities
     required property var wrapper
+
+    Component.onCompleted: {
+        root.visibilities.launcherList = root.currentList;
+    }
+
+    onCurrentListChanged: {
+        root.visibilities.launcherList = root.currentList;
+    }
 
     anchors.bottom: parent.bottom
     anchors.horizontalCenter: parent.horizontalCenter
@@ -81,7 +89,7 @@ Item {
         asynchronous: true
 
         sourceComponent: LauncherList {
-            search: root.search
+            searchText: root.searchText
             visibilities: root.visibilities
         }
     }

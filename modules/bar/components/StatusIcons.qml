@@ -295,8 +295,8 @@ Rectangle {
 
         default property alias content: contentContainer.children
 
-        implicitWidth: contentContainer.childrenRect.width + Foundations.spacing.xxs * 2
-        implicitHeight: contentContainer.childrenRect.height + Foundations.spacing.xxs * 2
+        implicitWidth: contentContainer.childrenRect.width
+        implicitHeight: contentContainer.childrenRect.height
         color: "transparent"
         radius: Foundations.radius.s
 

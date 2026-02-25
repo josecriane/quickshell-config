@@ -26,7 +26,7 @@ Rectangle {
         radius: parent.radius
     }
 
-    Text.BodyM {
+    Text.BodyS {
         id: dateText
 
         anchors.centerIn: parent
