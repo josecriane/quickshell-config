@@ -11,7 +11,6 @@ Item {
 
     required property Item wrapper
 
-    // ToDo: Review
     property int margin: Foundations.spacing.l
     property int itemSpacing: Foundations.spacing.xxs
 

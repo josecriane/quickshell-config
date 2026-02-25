@@ -20,7 +20,6 @@ ColumnLayout {
     property string pendingSsid: ""
     property bool showPasswordDialog: false
 
-    // ToDo: Review
     property int margin: Foundations.spacing.xxs
 
     spacing: margin

@@ -55,20 +55,13 @@ This configuration is packaged as a Nix flake with:
 
 ## Dependencies
 
-- QuickShell (from git+https://git.outfoxxed.me/outfoxxed/quickshell)
+- QuickShell (from git+https://git.outfoxxed.me/quickshell/quickshell)
 - Qt6 QML modules
 - Nix with flakes enabled
 
 ## ToDo
 - [ ] DS
   - [ ] Propagate margin, radius and opacity to all components
-- [ ] Bar
-  - [ ] Handle unknown icons
-- [ ] Notifications
-  - [ ] Add notificationTime
-  - [ ] Don't hide notification when hover
-  - [ ] Group notifications
-- [ ] Add material-icon into the flake
 
 ## Troubleshooting
 

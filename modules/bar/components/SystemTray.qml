@@ -14,7 +14,6 @@ Rectangle {
 
     property color colour: Foundations.palette.base0D
 
-    // ToDo: Review (maybe review all margin/paddings)
     property int margin: Foundations.spacing.s
     property int spacingItems: Foundations.spacing.m
 

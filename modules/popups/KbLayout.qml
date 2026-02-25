@@ -9,7 +9,6 @@ import QtQuick.Controls
 ColumnLayout {
     id: root
 
-    // ToDo: Review
     property int margin: Foundations.spacing.xxs
 
     spacing: margin

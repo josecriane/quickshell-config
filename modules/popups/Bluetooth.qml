@@ -16,7 +16,6 @@ ColumnLayout {
 
     required property Item wrapper
     
-    //ToDo: Review
     property int margin: Foundations.spacing.xxs
     property int itemSpacing: Foundations.spacing.m
 

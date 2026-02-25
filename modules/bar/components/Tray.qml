@@ -10,7 +10,6 @@ Rectangle {
 
     readonly property alias items: items
 
-    // ToDo: Reviow (maybe review all margin/paddings)
     property int margin: Foundations.spacing.xxs
     property int spacingItems: Foundations.spacing.xs
     property int buttonSize: Foundations.font.size.xl
@@ -20,7 +19,7 @@ Rectangle {
     implicitHeight: height
     implicitWidth: layout.implicitWidth + margin * 2
     radius: Foundations.radius.all
-    visible: width > 0 && height > 0 // To avoid warnings about being visible with no size
+    visible: width > 0 && height > 0
 
     Behavior on implicitWidth {
         BasicNumberAnimation {

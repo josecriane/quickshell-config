@@ -19,7 +19,6 @@ Item {
 
     required property var wrapper
 
-    // ToDo: Review
     property int margin: Foundations.spacing.s
 
     implicitHeight: layout.implicitHeight + margin * 2
