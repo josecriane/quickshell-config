@@ -13,14 +13,25 @@ Search {
     readonly property string passwordPath: ConfigsJson.keepass.masterPasswordPath
     readonly property string dbPath: ConfigsJson.keepass.databasePath
 
+    readonly property string otpPrefix: "?:otp "
+    property bool isOtpMode: false
+
     function search(search: string): list<var> {
-        if (search === prefix && passwordPath && dbPath) {
+        isOtpMode = search.startsWith(otpPrefix);
+        if ((search === prefix || search === otpPrefix) && passwordPath && dbPath) {
             loadEntries();
         }
-        return query(search);
+        const results = query(search);
+        if (isOtpMode) {
+            return results.filter(item => item.hasOtp);
+        }
+        return results;
     }
 
     function transformSearch(search: string): string {
+        if (search.startsWith(otpPrefix)) {
+            return search.slice(otpPrefix.length);
+        }
         return search.slice(prefix.length);
     }
 
@@ -39,7 +50,7 @@ Search {
     }
 
     function loadEntries() {
-        entriesProcess.command = ["sh", "-c", `cat "${passwordPath}" | keepassxc-cli ls --flatten -q "${dbPath}"`];
+        entriesProcess.command = ["sh", "-c", `cat "${passwordPath}" | keepassxc-cli export -q -f csv "${dbPath}" | awk -F'","' 'NR>1 && $2 != "" { group=$1; title=$2; user=$3; totp=$7; gsub(/^"/, "", group); sub(/^\\//, "", group); sub(/^Root\\/?/, "", group); if (group != "" && group !~ /\\/$/) group = group "\\/"; print group title "\t" user "\t" (totp != "" ? "1" : "0") }'`];
         entriesProcess.running = true;
     }
 
@@ -52,7 +63,7 @@ Search {
 
         stdout: StdioCollector {
             onStreamFinished: {
-                const lines = text.trim().split('\n').filter(line => line.length > 0 && !line.endsWith('/'));
+                const lines = text.trim().split('\n').filter(line => line.length > 0);
                 root.entryList = lines;
             }
         }
@@ -66,18 +77,24 @@ Search {
         delegate: LauncherItemModel {
             required property var modelData
 
-            readonly property string entryName: modelData
+            readonly property string entryName: modelData.split('\t')[0]
+            readonly property string entryUsername: modelData.split('\t')[1] || ""
+            readonly property bool hasOtp: modelData.split('\t')[2] === "1"
 
             function onActivate() {
-                Quickshell.execDetached(["sh", "-c", `cat "${root.passwordPath}" | keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" | tr -d '\\n' | wl-copy -o`]);
+                if (root.isOtpMode) {
+                    Quickshell.execDetached(["sh", "-c", `cat "${root.passwordPath}" | keepassxc-cli show -t -q "${root.dbPath}" "${entryName}" | tr -d '\\n' | wl-copy -o`]);
+                } else {
+                    Quickshell.execDetached(["sh", "-c", `cat "${root.passwordPath}" | keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" | tr -d '\\n' | wl-copy -o`]);
+                }
                 return true;
             }
 
             autocompleteText: ""
-            fontIcon: "key"
+            fontIcon: root.isOtpMode ? "timer" : "key"
             isAction: true
             name: entryName
-            subtitle: "Password entry"
+            subtitle: root.isOtpMode ? "OTP code" : (entryUsername || "Password entry")
         }
     }
 }
