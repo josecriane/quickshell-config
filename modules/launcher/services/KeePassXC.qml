@@ -69,7 +69,7 @@ Search {
             readonly property string entryName: modelData
 
             function onActivate() {
-                Quickshell.execDetached(["sh", "-c", `cat "${root.passwordPath}" | keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" | tr -d '\\n' | wl-copy`]);
+                Quickshell.execDetached(["sh", "-c", `cat "${root.passwordPath}" | keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" | tr -d '\\n' | wl-copy -o`]);
                 return true;
             }
 
