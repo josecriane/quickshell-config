@@ -180,10 +180,18 @@ Singleton {
                     // Strategy 1: For browser notifications with titleHint,
                     // try to find the specific PWA window first.
                     if (isBrowser && getWindowIdProcess.titleHint && getWindowIdProcess.titleHint.length > 0) {
-                        const hintWords = getWindowIdProcess.titleHint.split(/\s+/).filter(w => w.length > 2);
+                        const hint = getWindowIdProcess.titleHint;
 
-                        // Check PWA app_ids for keyword matches
-                        // E.g. appName "Google Chat" → "chat" matches "chrome-chat.google.com__-Default"
+                        for (let i = 0; i < windows.length; i++) {
+                            const window = windows[i];
+                            const windowAppId = (window.app_id || "").toLowerCase();
+                            if (windowAppId.startsWith("chrome-") && windowAppId.includes(hint)) {
+                                getWindowIdProcess.resultCallback(window);
+                                return;
+                            }
+                        }
+
+                        const hintWords = hint.split(/\s+/).filter(w => w.length > 2);
                         for (let i = 0; i < windows.length; i++) {
                             const window = windows[i];
                             const windowAppId = (window.app_id || "").toLowerCase();

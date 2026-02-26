@@ -61,9 +61,19 @@ Rectangle {
 
         onClicked: {
             const searchId = root.notification.desktopEntry || root.notification.appName;
-            const titleHint = root.notification.appName || root.summary;
+            let titleHint = root.notification.appName || root.summary;
+            const urlMatch = root.body.match(/https?:\/\/([^/">\s]+)/);
+            if (urlMatch) titleHint = urlMatch[1];
 
             if (searchId) {
+                let defaultAction = null;
+                for (let i = 0; i < root.notification.actions.length; i++) {
+                    if (root.notification.actions[i].identifier === "default") {
+                        defaultAction = root.notification.actions[i];
+                        break;
+                    }
+                }
+
                 root.clickState = "searching";
 
                 Niri.getWindowByAppId(searchId, (window) => {
@@ -74,18 +84,18 @@ Rectangle {
                         root.clickState = "notfound";
                     }
                     feedbackTimer.restart();
+                    if (defaultAction) defaultAction.invoke();
                 }, titleHint);
-            }
-
-            // Invoke the notification's default action (tells the app to focus the right window)
-            for (let i = 0; i < root.notification.actions.length; i++) {
-                if (root.notification.actions[i].identifier === "default") {
-                    root.notification.actions[i].invoke();
-                    return;
+            } else {
+                for (let i = 0; i < root.notification.actions.length; i++) {
+                    if (root.notification.actions[i].identifier === "default") {
+                        root.notification.actions[i].invoke();
+                        return;
+                    }
                 }
-            }
-            if (root.notification.actions.length === 0) {
-                root.notification.dismiss();
+                if (root.notification.actions.length === 0) {
+                    root.notification.dismiss();
+                }
             }
         }
     }

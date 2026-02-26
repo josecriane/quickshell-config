@@ -36,6 +36,7 @@ Search {
     }
 
     function loadEntries() {
+        entriesProcess.command = ["sh", "-c", `cat "${passwordPath}" | keepassxc-cli ls --flatten -q "${dbPath}"`];
         entriesProcess.running = true;
     }
 
@@ -44,7 +45,6 @@ Search {
     Process {
         id: entriesProcess
 
-        command: ["sh", "-c", `cat "${root.passwordPath}" | keepassxc-cli ls --flatten -q "${root.dbPath}"`]
         running: false
 
         stdout: StdioCollector {
