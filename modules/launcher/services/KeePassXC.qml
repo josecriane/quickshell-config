@@ -14,6 +14,9 @@ Search {
     readonly property string dbPath: ConfigsJson.keepass.databasePath
 
     function search(search: string): list<var> {
+        if (search === prefix && passwordPath && dbPath) {
+            loadEntries();
+        }
         return query(search);
     }
 
