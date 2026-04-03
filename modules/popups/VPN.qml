@@ -20,32 +20,30 @@ ColumnLayout {
     spacing: margin
     width: Math.max(320, implicitWidth)
 
-    property color statusColor: {
-        if (!VPN.available) return Foundations.palette.base08;
-        if (VPN.connecting) return Foundations.palette.base0A;
-        if (VPN.connected) return Foundations.palette.base0B;
-        return Foundations.palette.base02;
+    // Refresh both services when popup becomes visible
+    Component.onCompleted: {
+        OpenVPN.refreshStatus();
+        Tailscale.refreshStatus();
     }
 
-    // Header section
     Text.HeadingS {
         Layout.rightMargin: root.margin
         Layout.topMargin: root.margin
-        text: qsTr("VPN Connection")
+        text: qsTr("VPN")
     }
 
-    // Connection details section (shown when connected)
+    // OpenVPN connection details (shown when connected)
     Rectangle {
         Layout.fillWidth: true
-        Layout.preferredHeight: detailsLayout.implicitHeight + Foundations.spacing.m * 2
+        Layout.preferredHeight: openvpnDetailsLayout.implicitHeight + Foundations.spacing.m * 2
         Layout.rightMargin: root.margin
 
         color: Foundations.palette.base01
         radius: Foundations.radius.m
         border.color: Foundations.palette.base03
         border.width: 1
-        visible: VPN.connected
-        opacity: VPN.connected ? 1.0 : 0.0
+        visible: OpenVPN.connected
+        opacity: OpenVPN.connected ? 1.0 : 0.0
 
         Behavior on opacity {
             BasicNumberAnimation {
@@ -53,92 +51,151 @@ ColumnLayout {
         }
 
         ColumnLayout {
-            id: detailsLayout
+            id: openvpnDetailsLayout
 
             anchors.fill: parent
             anchors.margins: Foundations.spacing.m
             spacing: Foundations.spacing.s
 
-            Text.BodyS {
-                color: Foundations.palette.base04
-                text: qsTr("Connection Details")
-                font.weight: Font.Medium
-            }
-
-            // Connection name
             DetailRow {
                 icon: "vpn_key"
                 label: qsTr("Profile")
-                value: VPN.connectionName
+                value: OpenVPN.connectionName
             }
 
-            // External IP address
             DetailRow {
                 icon: "public"
                 label: qsTr("External IP")
-                value: VPN.ipAddress || qsTr("Fetching...")
-                loading: VPN.connected && !VPN.ipAddress
+                value: OpenVPN.ipAddress || qsTr("Fetching...")
+                loading: OpenVPN.connected && !OpenVPN.ipAddress
             }
         }
     }
 
-    // Available VPN connections list
+    // Tailscale connection details (shown when connected)
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: tailscaleDetailsLayout.implicitHeight + Foundations.spacing.m * 2
+        Layout.rightMargin: root.margin
+
+        color: Foundations.palette.base01
+        radius: Foundations.radius.m
+        border.color: Foundations.palette.base03
+        border.width: 1
+        visible: Tailscale.connected
+        opacity: Tailscale.connected ? 1.0 : 0.0
+
+        Behavior on opacity {
+            BasicNumberAnimation {
+            }
+        }
+
+        ColumnLayout {
+            id: tailscaleDetailsLayout
+
+            anchors.fill: parent
+            anchors.margins: Foundations.spacing.m
+            spacing: Foundations.spacing.s
+
+            DetailRow {
+                icon: "computer"
+                label: qsTr("Hostname")
+                value: Tailscale.hostname
+            }
+
+            DetailRow {
+                icon: "lan"
+                label: qsTr("Tailscale IP")
+                value: Tailscale.tailscaleIp || qsTr("Fetching...")
+                loading: Tailscale.connected && !Tailscale.tailscaleIp
+            }
+
+            DetailRow {
+                icon: "cell_tower"
+                label: qsTr("Relay")
+                value: Tailscale.relay || qsTr("Direct")
+            }
+        }
+    }
+
+    // VPN connections list
     ColumnLayout {
         Layout.fillWidth: true
         Layout.rightMargin: root.margin
         spacing: Foundations.spacing.s
-        visible: VPN.connections.length > 0
-
-        Text.BodyS {
-            color: Foundations.palette.base04
-            text: qsTr("Available Connections")
-            font.weight: Font.Medium
-        }
 
         Repeater {
-            model: VPN.connections
+            model: OpenVPN.connections
 
             ListItem {
                 required property var modelData
 
-                readonly property bool isActive: VPN.serviceName === modelData.serviceName && VPN.connected
-                readonly property bool isConnecting: VPN.serviceName === modelData.serviceName && VPN.connecting
+                readonly property bool isActive: OpenVPN.serviceName === modelData.serviceName && OpenVPN.connected
+                readonly property bool isConnecting: OpenVPN.serviceName === modelData.serviceName && OpenVPN.connecting
 
                 Layout.fillWidth: true
                 text: modelData.displayName
                 leftIcon: "vpn_key"
-                selected: VPN.serviceName === modelData.serviceName
-                disabled: VPN.connecting
+                selected: OpenVPN.serviceName === modelData.serviceName
+                disabled: OpenVPN.connecting
                 primaryActionActive: isActive
                 primaryActionLoading: isConnecting
                 primaryFontIcon: isActive ? "link_off" : "link"
 
                 onPrimaryActionClicked: {
                     if (isActive) {
-                        // If this VPN is connected, disconnect it
-                        VPN.disconnect();
+                        OpenVPN.disconnect();
                     } else {
-                        // Connect to this VPN
-                        VPN.connectToService(modelData.serviceName);
+                        OpenVPN.connectToService(modelData.serviceName);
                     }
                 }
             }
         }
+
+        // Tailscale entry
+        ListItem {
+            Layout.fillWidth: true
+            visible: Tailscale.available
+            text: "Tailscale"
+            leftIcon: "vpn_key"
+            selected: Tailscale.connected
+            disabled: Tailscale.connecting
+            primaryActionActive: Tailscale.connected
+            primaryActionLoading: Tailscale.connecting
+            primaryFontIcon: Tailscale.connected ? "link_off" : "link"
+
+            onPrimaryActionClicked: Tailscale.toggle()
+        }
     }
 
-    // Error message section
-    Rectangle {
+    // OpenVPN error
+    ErrorBanner {
+        visible: OpenVPN.errorMessage !== ""
+        message: OpenVPN.errorMessage
+    }
+
+    // Tailscale error
+    ErrorBanner {
+        visible: Tailscale.errorMessage !== ""
+        message: Tailscale.errorMessage
+    }
+
+    // --- Shared components ---
+
+    component ErrorBanner: Rectangle {
+        required property string message
+
         Layout.fillWidth: true
-        Layout.preferredHeight: errorText.implicitHeight + Foundations.spacing.s * 2
+        Layout.preferredHeight: errorRow.implicitHeight + Foundations.spacing.s * 2
         Layout.rightMargin: root.margin
 
         color: Foundations.palette.base08
         radius: Foundations.radius.s
         border.color: Foundations.palette.base08
         border.width: 1
-        visible: VPN.errorMessage !== ""
 
         RowLayout {
+            id: errorRow
             anchors.fill: parent
             anchors.margins: Foundations.spacing.s
             spacing: Foundations.spacing.s
@@ -150,17 +207,14 @@ ColumnLayout {
             }
 
             Text.BodyS {
-                id: errorText
                 Layout.fillWidth: true
                 color: Foundations.palette.base08
-                text: VPN.errorMessage || ""
+                text: parent.parent.message || ""
                 wrapMode: QQ.Text.WordWrap
             }
         }
     }
 
-
-    // Component for detail rows
     component DetailRow: RowLayout {
         required property string icon
         required property string label
@@ -190,7 +244,6 @@ ColumnLayout {
             font.family: parent.value.match(/^\d+\.\d+\.\d+\.\d+$/) ? Foundations.font.family.mono : Foundations.font.family.sans
             text: parent.value
 
-            // Loading animation for dynamic values
             SequentialAnimation on opacity {
                 running: parent.parent.loading || false
                 loops: Animation.Infinite

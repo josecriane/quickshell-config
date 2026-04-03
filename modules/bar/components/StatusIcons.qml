@@ -130,22 +130,29 @@ Rectangle {
             name: "vpn"
 
             sourceComponent: ClickableIcon {
-                onClicked: VPN.toggle()
+                onClicked: OpenVPN.toggle()
 
                 Item {
                     implicitWidth: vpnIcon.implicitWidth
                     implicitHeight: vpnIcon.implicitHeight
 
+                    readonly property bool anyConnected: OpenVPN.connected || Tailscale.connected
+                    readonly property bool anyConnecting: OpenVPN.connecting || Tailscale.connecting
+
                     MaterialFontIcon {
                         id: vpnIcon
                         animate: true
                         color: {
-                            if (!VPN.available) return Foundations.palette.base08;
-                            if (VPN.connecting) return Foundations.palette.base0A;
-                            if (VPN.connected) return Foundations.palette.base0B;
+                            if (!OpenVPN.available && !Tailscale.available) return Foundations.palette.base08;
+                            if (parent.anyConnecting) return Foundations.palette.base0A;
+                            if (parent.anyConnected) return Foundations.palette.base0B;
                             return root.colour;
                         }
-                        text: VPN.statusIcon
+                        text: {
+                            if (parent.anyConnecting) return "sync";
+                            if (parent.anyConnected) return "vpn_key";
+                            return "vpn_key_off";
+                        }
 
                         Behavior on color {
                             BasicColorAnimation { }
@@ -153,11 +160,15 @@ Rectangle {
                     }
 
                     // Subtle pulsing animation for connecting state
-                    SequentialAnimation on opacity {
-                        running: VPN.connecting
+                    opacity: vpnPulse.running ? vpnPulse.value : 1.0
+
+                    SequentialAnimation {
+                        id: vpnPulse
+                        running: parent.anyConnecting
                         loops: Animation.Infinite
-                        BasicNumberAnimation { from: 1.0; to: 0.4; duration: Foundations.duration.slow }
-                        BasicNumberAnimation { from: 0.4; to: 1.0; duration: Foundations.duration.slow }
+                        property real value: 1.0
+                        BasicNumberAnimation { target: vpnPulse; property: "value"; from: 1.0; to: 0.4; duration: Foundations.duration.slow }
+                        BasicNumberAnimation { target: vpnPulse; property: "value"; from: 0.4; to: 1.0; duration: Foundations.duration.slow }
                     }
 
                     // Small progress dot indicator
@@ -170,10 +181,10 @@ Rectangle {
                         height: 6
                         radius: 3
                         color: Foundations.palette.base0D
-                        visible: VPN.connecting
+                        visible: parent.anyConnecting
 
                         SequentialAnimation on scale {
-                            running: VPN.connecting
+                            running: parent.anyConnecting
                             loops: Animation.Infinite
                             BasicNumberAnimation { from: 1.0; to: 1.4; duration: Foundations.duration.standard }
                             BasicNumberAnimation { from: 1.4; to: 1.0; duration: Foundations.duration.standard }

@@ -125,16 +125,27 @@ Scope {
     IpcHandler {
         function status(): string {
             return JSON.stringify({
-                connected: VPN.connected,
-                connecting: VPN.connecting,
-                available: VPN.available,
-                connectionName: VPN.connectionName,
-                serverLocation: VPN.serverLocation,
-                ipAddress: VPN.ipAddress
+                openvpn: {
+                    connected: OpenVPN.connected,
+                    connecting: OpenVPN.connecting,
+                    available: OpenVPN.available,
+                    connectionName: OpenVPN.connectionName,
+                    ipAddress: OpenVPN.ipAddress
+                },
+                tailscale: {
+                    connected: Tailscale.connected,
+                    connecting: Tailscale.connecting,
+                    available: Tailscale.available,
+                    tailscaleIp: Tailscale.tailscaleIp,
+                    hostname: Tailscale.hostname
+                }
             });
         }
-        function toggle(): void {
-            VPN.toggle();
+        function toggleOpenvpn(): void {
+            OpenVPN.toggle();
+        }
+        function toggleTailscale(): void {
+            Tailscale.toggle();
         }
 
         target: "vpn"
