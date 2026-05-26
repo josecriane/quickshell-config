@@ -203,7 +203,7 @@
 
                 # Create fonts directory and symlink the fonts
                 mkdir -p $out/share/fonts
-                ln -s ${pkgs.material-symbols}/share/fonts/TTF $out/share/fonts/
+                ln -s ${pkgs.material-symbols}/share/fonts/truetype $out/share/fonts/
 
                 # Main quickshell wrapper. --config qsc selects the named
                 # config installed under $out/etc/xdg/quickshell/qsc/, which
