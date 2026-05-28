@@ -200,7 +200,7 @@
 
                 # Create fonts directory and symlink the fonts
                 mkdir -p $out/share/fonts
-                ln -s ${pkgs.material-symbols}/share/fonts/TTF $out/share/fonts/
+                ln -s ${pkgs.material-symbols}/share/fonts/truetype $out/share/fonts/
 
                 # Main quickshell wrapper
                 makeWrapper ${quickshellPkg}/bin/quickshell $out/bin/quickshell-config \
