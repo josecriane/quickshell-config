@@ -22,26 +22,26 @@ Search {
         }
     }
     function search(searchText: string): list<var> {
-        const results = query(searchText);
+        const counts = historyData;
+        const boost = id => {
+            const count = counts[id] || 0;
+            return count > 0 ? frequencyWeight * Math.log2(1 + count) : 0;
+        };
 
-        // Only sort by launch count when there's no search query
-        // When searching, preserve fuzzy match order
-        if (!searchText) {
-            const counts = historyData;
-            return results.sort((a, b) => {
-                const countA = counts[a.originalData?.id] || 0;
-                const countB = counts[b.originalData?.id] || 0;
-                if (countA !== countB) {
-                    return countB - countA;  // Higher count first
-                }
-                return a.name.localeCompare(b.name);
-            });
-        }
-
-        return results;
+        return queryScored(searchText).map(r => ({
+            item: r.item,
+            score: r.score + boost(r.item.originalData?.id)
+        })).sort((a, b) => {
+            if (a.score !== b.score)
+                return b.score - a.score;
+            return a.item.name.localeCompare(b.item.name);
+        }).map(r => r.item);
     }
 
     list: variants.instances
+
+    // Frequency boost weight, log-scaled, comparable to fzf's per-char match score
+    property real frequencyWeight: 8.0
 
     // Reference to trigger re-sort when history changes
     property var historyData: LauncherHistory.launchCounts
