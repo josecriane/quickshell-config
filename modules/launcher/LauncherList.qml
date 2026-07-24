@@ -105,6 +105,22 @@ ListView {
     }
     model: ScriptModel {
         id: model
+        values: {
+            switch (root.state) {
+            case "actions":
+                return root.actionsLauncher.search(root.searchText);
+            case "commands":
+                return root.commandsLauncher.search(root.searchText);
+            case "sessionCommands":
+                return root.sessionCommandsLauncher.search(root.searchText);
+            case "keepassxc":
+                return root.keepassxcLauncher.search(root.searchText);
+            case "interactive":
+                return [0];
+            default:
+                return LauncherServices.Apps.search(root.searchText);
+            }
+        }
 
         onValuesChanged: root.currentIndex = count > 0 ? 0 : -1
     }
@@ -129,7 +145,6 @@ ListView {
             name: "apps"
 
             PropertyChanges {
-                model.values: LauncherServices.Apps.search(root.searchText)
                 root.delegate: appItem
             }
         },
@@ -137,7 +152,6 @@ ListView {
             name: "actions"
 
             PropertyChanges {
-                model.values: root.actionsLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },
@@ -145,7 +159,6 @@ ListView {
             name: "commands"
 
             PropertyChanges {
-                model.values: root.commandsLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },
@@ -153,7 +166,6 @@ ListView {
             name: "sessionCommands"
 
             PropertyChanges {
-                model.values: root.sessionCommandsLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },
@@ -161,7 +173,6 @@ ListView {
             name: "keepassxc"
 
             PropertyChanges {
-                model.values: root.keepassxcLauncher.search(root.searchText)
                 root.delegate: actionItem
             }
         },
@@ -169,7 +180,6 @@ ListView {
             name: "interactive"
 
             PropertyChanges {
-                model.values: [0]
                 root.delegate: interactiveItem
             }
         }
@@ -193,8 +203,8 @@ ListView {
                 }
             }
             PropertyAction {
-                properties: "values,delegate"
-                targets: [model, root]
+                property: "delegate"
+                target: root
             }
             ParallelAnimation {
                 BasicNumberAnimation {
