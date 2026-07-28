@@ -23,7 +23,7 @@ Personal QuickShell configuration packaged as a Nix flake.
 quickshell-config
 
 # Or use the start script (kills existing instance first)
-~/.config/niri/start-quickshell
+~/.config/mango/start-quickshell
 
 # Run from a working copy with live reload
 quickshell -p ./
@@ -49,12 +49,15 @@ shell, so the IPC client and the running instance are always the
 same version (IPC is not forward/backward compatible across
 quickshell versions).
 
-### Integration with Niri
+### Integration with Mango
 
-The configuration is automatically integrated when using Niri as window manager. To enable auto-start, uncomment the following line in `modules/home/wm/niri/default.nix`:
+The bar reads compositor state through the `Mango` singleton
+(`services/Mango.qml`), which talks to mango over `mmsg` (`watch` streams
+for tags, monitors, focus, and keyboard layout; `dispatch` for actions).
+Auto-start happens from mango's `autostart.sh`:
 
-```kdl
-spawn-at-startup "sh" "-c" "~/.config/niri/start-quickshell"
+```bash
+~/.config/mango/start-quickshell &
 ```
 
 ## Development

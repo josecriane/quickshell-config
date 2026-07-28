@@ -9,13 +9,13 @@ Singleton {
 
     readonly property bool isSharing: screenCastNodes.length > 0
     readonly property var screenCastNodes: Pipewire.nodes.values.filter(node => {
-        // Detect niri screen cast nodes
-        const isNiriScreenCast = node.name === "niri" && !node.isStream;
-        
+        // Detect xdg-desktop-portal-wlr screen cast nodes
+        const isWlrScreenCast = (node.name || "").startsWith("xdpw");
+
         // Also detect video streams (for other apps)
         const isVideoStream = node.isStream && !!node.video;
-        
-        return isNiriScreenCast || isVideoStream;
+
+        return isWlrScreenCast || isVideoStream;
     })
 
     readonly property var screenCaptureNodes: Pipewire.nodes.values.filter(node => {

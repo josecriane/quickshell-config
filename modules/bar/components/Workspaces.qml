@@ -25,7 +25,10 @@ Item {
         masterAnimation.restart();
     }
     function updateWorkspaceFocus() {
-        const focusedId = Niri.workspaces?.[Niri.focusedWorkspaceIndex]?.id ?? -1;
+        // Tag numbers repeat per monitor, so the focused id only counts here
+        // when the focused workspace belongs to this screen
+        const focused = Mango.workspaces?.[Mango.focusedWorkspaceIndex];
+        const focusedId = (focused && focused.output === root.screen.name) ? focused.id : -1;
         for (let i = 0; i < workspaces.count; i++) {
             const ws = workspaces.get(i);
             const isFocused = ws.id === focusedId;
@@ -41,13 +44,12 @@ Item {
         }
     }
     function updateWorkspaceList() {
-        const newList = Niri.workspaces || [];
+        const newList = Mango.workspaces || [];
         workspaces.clear();
         for (let i = 0; i < newList.length; i++) {
             const ws = newList[i];
-            // Only show workspaces for this screen/monitor
+            // Only show tags for this screen/monitor
             if (ws.output === root.screen.name) {
-                // Check workspaces model on niri
                 workspaces.append({
                     id: ws.id,
                     idx: ws.idx,
@@ -55,7 +57,8 @@ Item {
                     output: ws.output,
                     isActive: ws.is_active,
                     isFocused: ws.is_focused,
-                    isUrgent: ws.is_urgent
+                    isUrgent: ws.is_urgent,
+                    occupied: ws.occupied === true
                 });
             }
         }
@@ -93,7 +96,7 @@ Item {
             updateWorkspaceList();
         }
 
-        target: Niri
+        target: Mango
     }
     SequentialAnimation {
         id: masterAnimation
@@ -143,6 +146,8 @@ Item {
                         return activeColor;
                     if (isHovered)
                         return Qt.lighter(Foundations.palette.base04, 1.3);
+                    if (model.occupied)
+                        return Qt.lighter(Foundations.palette.base04, 1.15);
                     return Foundations.palette.base04;
                 }
                 height: 12
@@ -187,7 +192,7 @@ Item {
 
                     onClicked: {
                         if (!model.isFocused) {
-                            Niri.focusWorkspace(model.id);
+                            Mango.focusWorkspace(model.id);
                         }
                     }
                 }

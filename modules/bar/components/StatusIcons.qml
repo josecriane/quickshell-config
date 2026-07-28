@@ -81,8 +81,8 @@ Rectangle {
 
             sourceComponent: ClickableIcon {
                 onClicked: {
-                    const nextIndex = (Niri.currentKbLayoutIndex + 1) % Niri.kbLayouts.length;
-                    Niri.switchKbLayout(nextIndex);
+                    const nextIndex = (Mango.currentKbLayoutIndex + 1) % Mango.kbLayouts.length;
+                    Mango.switchKbLayout(nextIndex);
                 }
 
                 Text.BodyM {
@@ -90,7 +90,7 @@ Rectangle {
                     color: root.colour
                     font.family: Foundations.font.family.mono
                     text: {
-                        const fullName = Niri.currentKbLayoutName();
+                        const fullName = Mango.currentKbLayoutName();
                         if (!fullName)
                             return "??";
 

@@ -26,18 +26,18 @@ ColumnLayout {
     Repeater {
         id: layoutRepeater
 
-        model: Niri.kbLayouts
+        model: Mango.kbLayouts
 
         Lists.ListItem {
             required property int index
             required property string modelData
 
             buttonGroup: layoutGroup
-            selected: index === Niri.currentKbLayoutIndex
+            selected: index === Mango.currentKbLayoutIndex
             text: modelData
 
             onClicked: {
-                Niri.switchKbLayout(index);
+                Mango.switchKbLayout(index);
             }
         }
     }
@@ -48,11 +48,11 @@ ColumnLayout {
             for (let i = 0; i < layoutRepeater.count; i++) {
                 let item = layoutRepeater.itemAt(i);
                 if (item) {
-                    item.selected = (i === Niri.currentKbLayoutIndex);
+                    item.selected = (i === Mango.currentKbLayoutIndex);
                 }
             }
         }
 
-        target: Niri
+        target: Mango
     }
 }

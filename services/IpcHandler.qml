@@ -131,14 +131,14 @@ Scope {
     IpcHandler {
         function focus(id: string): string {
             const workspaceId = parseInt(id);
-            Niri.focusWorkspace(workspaceId);
+            Mango.focusWorkspace(workspaceId);
             return `focusing workspace ${workspaceId}`;
         }
         function list(): string {
-            return Niri.workspaces.map(w => `${w.id}: ${w.name || 'unnamed'} (${w.output})`).join("\n");
+            return Mango.workspaces.map(w => `${w.id}: ${w.name || 'unnamed'} (${w.output})`).join("\n");
         }
         function current(): string {
-            const ws = Niri.workspaces[Niri.focusedWorkspaceIndex];
+            const ws = Mango.workspaces[Mango.focusedWorkspaceIndex];
             return ws ? `${ws.id}: ${ws.name || 'unnamed'}` : "unknown";
         }
 
