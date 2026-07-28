@@ -53,7 +53,8 @@ Singleton {
 
     // Function to switch keyboard layout
     function switchKbLayout(index: int): void {
-        switchLayoutProcess.command = ["mmsg", "dispatch", "switch_keyboard_layout," + index.toString()];
+        // mango's index is 1-based; 0 means "cycle to next"
+        switchLayoutProcess.command = ["mmsg", "dispatch", "switch_keyboard_layout," + (index + 1).toString()];
         switchLayoutProcess.running = false;
         switchLayoutProcess.running = true;
     }
