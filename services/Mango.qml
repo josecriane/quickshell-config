@@ -66,13 +66,19 @@ Singleton {
         focusWorkspaceProcess.running = true;
     }
 
-    // Every monitor always exposes tags 1-9; a tag is "active" when viewed on
-    // its monitor and "focused" when also on the focused monitor.
+    // Every monitor always exposes mango's nine compiled-in tags; tagCount
+    // must match the tags bound in the mango config. A tag is "active" when
+    // viewed on its monitor and "focused" when also on the focused monitor.
+    readonly property int tagCount: 7
+
     function rebuildWorkspaces(): void {
         const list = [];
         let focusedIndex = 0;
         for (const entry of root.lastAllTags) {
             for (const tag of (entry.tags || [])) {
+                if (tag.index > root.tagCount) {
+                    continue;
+                }
                 const isActive = tag.is_active === true;
                 const isFocused = isActive && entry.monitor === root.focusedOutput;
                 if (isFocused && list.findIndex(w => w.is_focused) < 0) {
