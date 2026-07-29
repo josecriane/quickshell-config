@@ -8,7 +8,7 @@ Singleton {
     property var screens: new Map()
 
     function getForActive(): PersistentProperties {
-        const focusedOutput = Niri.focusedOutput;
+        const focusedOutput = Mango.focusedOutput;
 
         for (const [screen, visibilities] of screens) {
             if (screen.name === focusedOutput) {

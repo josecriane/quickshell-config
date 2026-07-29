@@ -61,9 +61,9 @@ FocusScope {
                 const notification = group.latestNotification;
                 const searchId = notification.desktopEntry || notification.appName;
                 if (searchId) {
-                    Niri.getWindowByAppId(searchId, (window) => {
+                    Mango.getWindowByAppId(searchId, (window) => {
                         if (window && window.id) {
-                            Niri.focusWindowById(window.id);
+                            Mango.focusWindowById(window.id);
                         }
                     }, notification.summary || "");
                 }

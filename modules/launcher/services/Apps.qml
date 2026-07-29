@@ -16,9 +16,9 @@ Search {
         if (entry.runInTerminal) {
             const terminal = "alacritty";
             const terminalCommand = `${terminal} -e ${entry.command.join(" ")}`;
-            Niri.spawn(terminalCommand);
+            Mango.spawn(terminalCommand);
         } else {
-            Niri.spawn(entry.command.join(" "));
+            Mango.spawn(entry.command.join(" "));
         }
     }
     function search(searchText: string): list<var> {

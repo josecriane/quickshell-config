@@ -30,7 +30,7 @@ Rectangle {
 
     InteractiveArea {
         function onClicked(): void {
-            Niri.spawn("alacritty -e btop");
+            Mango.spawn("alacritty -e btop");
         }
 
         radius: parent.radius

@@ -71,10 +71,10 @@ Rectangle {
 
             root.clickState = "searching";
 
-            Niri.getWindowByAppId(searchId, (window) => {
+            Mango.getWindowByAppId(searchId, (window) => {
                 if (window && window.id) {
                     root.clickState = "found";
-                    Niri.focusWindowById(window.id);
+                    Mango.focusWindowById(window.id);
                 } else {
                     root.clickState = "notfound";
                 }
