@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import qs.services
 import qs.ds
-import qs.services
 import qs.ds.icons as Icons
 import Quickshell
 import Quickshell.Widgets
@@ -40,13 +39,8 @@ Rectangle {
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
     readonly property bool isLow: notification.urgency === NotificationUrgency.Low
 
-    // Click feedback state: "idle", "searching", "found", "notfound"
-    property string clickState: "idle"
-
     color: {
-        if (clickState === "searching") return Qt.lighter(Foundations.palette.base03, 1.1);
-        if (clickState === "found") return Foundations.palette.base0B;
-        if (clickState === "notfound") return Foundations.palette.base09;
+        if (mouseArea.hasFeedback) return mouseArea.feedbackColor;
         if (root.isCritical) return Foundations.palette.base04;
         return Foundations.palette.base02;
     }
@@ -60,65 +54,12 @@ Rectangle {
         }
     }
 
-    // Reset click state after feedback
-    Timer {
-        id: feedbackTimer
-        interval: 600
-        onTriggered: root.clickState = "idle"
-    }
-
-    MouseArea {
+    NotificationClickArea {
         id: mouseArea
 
-        acceptedButtons: Qt.LeftButton
         anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
+        notification: root.notification
         preventStealing: true
-
-        onClicked: event => {
-            if (event.button !== Qt.LeftButton)
-                return;
-
-            // Try to focus window by desktopEntry first, then appName
-            const searchId = root.notification.desktopEntry || root.appName;
-            let titleHint = root.appName || root.summary;
-            const urlMatch = root.body.match(/https?:\/\/([^/">\s]+)/);
-            if (urlMatch) titleHint = urlMatch[1];
-
-            if (searchId) {
-                let defaultAction = null;
-                for (let i = 0; i < root.notification.actions.length; i++) {
-                    if (root.notification.actions[i].identifier === "default") {
-                        defaultAction = root.notification.actions[i];
-                        break;
-                    }
-                }
-
-                root.clickState = "searching";
-
-                Niri.getWindowByAppId(searchId, (window) => {
-                    if (window && window.id) {
-                        root.clickState = "found";
-                        Niri.focusWindowById(window.id);
-                    } else {
-                        root.clickState = "notfound";
-                    }
-                    feedbackTimer.restart();
-                    if (defaultAction) defaultAction.invoke();
-                }, titleHint);
-            } else {
-                for (let i = 0; i < root.notification.actions.length; i++) {
-                    if (root.notification.actions[i].identifier === "default") {
-                        root.notification.actions[i].invoke();
-                        return;
-                    }
-                }
-                if (root.notification.actions.length === 0) {
-                    root.notification.dismiss();
-                }
-            }
-        }
 
         Item {
             id: inner
