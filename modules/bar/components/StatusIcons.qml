@@ -133,6 +133,8 @@ Rectangle {
                 onClicked: OpenVPN.toggle()
 
                 Item {
+                    id: vpnState
+
                     implicitWidth: vpnIcon.implicitWidth
                     implicitHeight: vpnIcon.implicitHeight
 
@@ -144,13 +146,13 @@ Rectangle {
                         animate: true
                         color: {
                             if (!OpenVPN.available && !Tailscale.available) return Foundations.palette.base08;
-                            if (parent.anyConnecting) return Foundations.palette.base0A;
-                            if (parent.anyConnected) return Foundations.palette.base0B;
+                            if (vpnState.anyConnecting) return Foundations.palette.base0A;
+                            if (vpnState.anyConnected) return Foundations.palette.base0B;
                             return root.colour;
                         }
                         text: {
-                            if (parent.anyConnecting) return "sync";
-                            if (parent.anyConnected) return "vpn_key";
+                            if (vpnState.anyConnecting) return "sync";
+                            if (vpnState.anyConnected) return "vpn_key";
                             return "vpn_key_off";
                         }
 
@@ -164,7 +166,7 @@ Rectangle {
 
                     SequentialAnimation {
                         id: vpnPulse
-                        running: parent.anyConnecting
+                        running: vpnState.anyConnecting
                         loops: Animation.Infinite
                         property real value: 1.0
                         BasicNumberAnimation { target: vpnPulse; property: "value"; from: 1.0; to: 0.4; duration: Foundations.duration.slow }
@@ -181,10 +183,10 @@ Rectangle {
                         height: 6
                         radius: 3
                         color: Foundations.palette.base0D
-                        visible: parent.anyConnecting
+                        visible: vpnState.anyConnecting
 
                         SequentialAnimation on scale {
-                            running: parent.anyConnecting
+                            running: vpnState.anyConnecting
                             loops: Animation.Infinite
                             BasicNumberAnimation { from: 1.0; to: 1.4; duration: Foundations.duration.standard }
                             BasicNumberAnimation { from: 1.4; to: 1.0; duration: Foundations.duration.standard }
