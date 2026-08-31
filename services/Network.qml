@@ -2,334 +2,109 @@ pragma Singleton
 
 import Quickshell
 import Quickshell.Io
+import Quickshell.Networking as Net
 import QtQuick
 
 Singleton {
     id: root
 
-    readonly property AccessPoint active: networks.find(n => n.active) ?? null
-    readonly property list<AccessPoint> networks: []
-    readonly property bool scanning: rescanProc.running
-    property bool wifiEnabled: true
+    readonly property var devices: Net.Networking.devices.values
+    readonly property var wifiDevice: devices.find(d => d.type === Net.DeviceType.Wifi) ?? null
+    readonly property var ethernetDevice: devices.find(d => d.type === Net.DeviceType.Wired) ?? null
 
-    // Network interface information
-    readonly property list<NetworkInterface> interfaces: []
-    readonly property string wifiIp: getInterfaceIp("wifi")
-    readonly property string ethernetIp: getInterfaceIp("ethernet")
-    readonly property bool hasWifiConnection: wifiIp !== ""
-    readonly property bool hasEthernetConnection: ethernetIp !== ""
+    readonly property bool wifiEnabled: Net.Networking.wifiEnabled
+    readonly property bool wifiHardwareEnabled: Net.Networking.wifiHardwareEnabled
 
-    function connectToNetwork(ssid: string, password: string): void {
-        if (password && password.length > 0) {
-            connectProc.exec(["nmcli", "device", "wifi", "connect", ssid, "password", password]);
-        } else {
-            connectProc.exec(["nmcli", "connection", "up", ssid]);
-        }
-    }
-    function disconnectFromNetwork(): void {
-        if (active) {
-            disconnectProc.exec(["nmcli", "connection", "down", active.ssid]);
-        }
-    }
+    readonly property var networks: wifiDevice?.networks.values ?? []
+    readonly property var active: networks.find(n => n.connected) ?? null
+
+    readonly property bool hasWifiConnection: wifiDevice?.connected ?? false
+    readonly property bool hasEthernetConnection: ethernetDevice?.connected ?? false
+
+    property int scanRefCount: 0
+    readonly property bool scanning: wifiDevice?.scannerEnabled ?? false
+
+    property var ipsByInterface: ({})
+    readonly property string wifiIp: wifiDevice ? (ipsByInterface[wifiDevice.name] ?? "") : ""
+    readonly property string ethernetIp: ethernetDevice ? (ipsByInterface[ethernetDevice.name] ?? "") : ""
+
     function enableWifi(enabled: bool): void {
-        const cmd = enabled ? "on" : "off";
-        enableWifiProc.exec(["nmcli", "radio", "wifi", cmd]);
-    }
-    function getWifiStatus(): void {
-        wifiStatusProc.running = true;
-    }
-    function rescanWifi(): void {
-        rescanProc.running = true;
+        Net.Networking.wifiEnabled = enabled;
     }
     function toggleWifi(): void {
-        const cmd = wifiEnabled ? "off" : "on";
-        enableWifiProc.exec(["nmcli", "radio", "wifi", cmd]);
-    }
-    function getInterfaceIp(type: string): string {
-        const iface = interfaces.find(i => i.type === type && i.state === "connected");
-        return iface ? iface.ip : "";
-    }
-    function refreshInterfaces(): void {
-        getInterfacesProc.running = true;
+        Net.Networking.wifiEnabled = !Net.Networking.wifiEnabled;
     }
 
-    reloadableId: "network"
+    function acquireScanner(): void {
+        root.scanRefCount++;
+    }
+    function releaseScanner(): void {
+        if (root.scanRefCount > 0)
+            root.scanRefCount--;
+    }
 
-    Process {
-        command: ["nmcli", "m"]
-        running: true
+    function refreshIps(): void {
+        ipDebounce.restart();
+    }
 
-        stdout: SplitParser {
-            onRead: {
-                getNetworks.running = true;
-                getInterfacesProc.running = true;
-            }
+    onWifiDeviceChanged: root.refreshIps()
+    onEthernetDeviceChanged: root.refreshIps()
+
+    Binding {
+        property: "scannerEnabled"
+        target: root.wifiDevice
+        value: root.scanRefCount > 0
+        when: root.wifiDevice !== null
+    }
+
+    Connections {
+        function onStateChanged(): void {
+            root.refreshIps();
+        }
+
+        ignoreUnknownSignals: true
+        target: root.wifiDevice
+    }
+    Connections {
+        function onStateChanged(): void {
+            root.refreshIps();
+        }
+
+        ignoreUnknownSignals: true
+        target: root.ethernetDevice
+    }
+
+    Timer {
+        id: ipDebounce
+
+        interval: 500
+
+        onTriggered: {
+            ipProc.running = false;
+            ipProc.running = true;
         }
     }
     Process {
-        id: wifiStatusProc
+        id: ipProc
 
-        command: ["nmcli", "radio", "wifi"]
-        environment: ({
-                LANG: "C.UTF-8",
-                LC_ALL: "C.UTF-8"
-            })
-        running: true
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.wifiEnabled = text.trim() === "enabled";
-            }
-        }
-    }
-    Process {
-        id: enableWifiProc
-
-        onExited: {
-            root.getWifiStatus();
-            getNetworks.running = true;
-            getInterfacesProc.running = true;
-        }
-    }
-    Process {
-        id: rescanProc
-
-        command: ["nmcli", "dev", "wifi", "list", "--rescan", "yes"]
-
-        onExited: {
-            getNetworks.running = true;
-            getInterfacesProc.running = true;
-        }
-    }
-    Process {
-        id: connectProc
-
-        stderr: StdioCollector {
-            onStreamFinished: console.warn("Network connection error:", text)
-        }
-        stdout: SplitParser {
-            onRead: {
-                getNetworks.running = true;
-                getInterfacesProc.running = true;
-            }
-        }
-    }
-    Process {
-        id: disconnectProc
-
-        stdout: SplitParser {
-            onRead: {
-                getNetworks.running = true;
-                getInterfacesProc.running = true;
-            }
-        }
-    }
-    Process {
-        id: getNetworks
-
-        command: ["nmcli", "-g", "ACTIVE,SIGNAL,FREQ,SSID,BSSID,SECURITY", "d", "w"]
-        environment: ({
-                LANG: "C.UTF-8",
-                LC_ALL: "C.UTF-8"
-            })
+        command: ["ip", "-j", "-4", "addr", "show"]
         running: true
 
         stdout: StdioCollector {
             onStreamFinished: {
-                const PLACEHOLDER = "STRINGWHICHHOPEFULLYWONTBEUSED";
-                const rep = new RegExp("\\\\:", "g");
-                const rep2 = new RegExp(PLACEHOLDER, "g");
-
-                const allNetworks = text.trim().split("\n").map(n => {
-                    const net = n.replace(rep, PLACEHOLDER).split(":");
-                    return {
-                        active: net[0] === "yes",
-                        strength: parseInt(net[1]),
-                        frequency: parseInt(net[2]),
-                        ssid: net[3],
-                        bssid: net[4]?.replace(rep2, ":") ?? "",
-                        security: net[5] || ""
-                    };
-                }).filter(n => n.ssid && n.ssid.length > 0);
-
-                // Group networks by SSID and prioritize connected ones
-                const networkMap = new Map();
-                for (const network of allNetworks) {
-                    const existing = networkMap.get(network.ssid);
-                    if (!existing) {
-                        networkMap.set(network.ssid, network);
-                    } else {
-                        // Prioritize active/connected networks
-                        if (network.active && !existing.active) {
-                            networkMap.set(network.ssid, network);
-                        } else if (!network.active && !existing.active) {
-                            // If both are inactive, keep the one with better signal
-                            if (network.strength > existing.strength) {
-                                networkMap.set(network.ssid, network);
-                            }
-                        }
-                        // If existing is active and new is not, keep existing
+                const byName = {};
+                try {
+                    for (const iface of JSON.parse(text || "[]")) {
+                        const addr = iface.addr_info?.find(a => a.family === "inet");
+                        if (addr?.local)
+                            byName[iface.ifname] = addr.local;
                     }
+                } catch (e) {
+                    console.warn("Network: could not parse `ip` output:", e);
+                    return;
                 }
-
-                const networks = Array.from(networkMap.values());
-
-                const rNetworks = root.networks;
-
-                const destroyed = rNetworks.filter(rn => !networks.find(n => n.frequency === rn.frequency && n.ssid === rn.ssid && n.bssid === rn.bssid));
-                for (const network of destroyed)
-                    rNetworks.splice(rNetworks.indexOf(network), 1).forEach(n => n.destroy());
-
-                for (const network of networks) {
-                    const match = rNetworks.find(n => n.frequency === network.frequency && n.ssid === network.ssid && n.bssid === network.bssid);
-                    if (match) {
-                        match.lastIpcObject = network;
-                    } else if (apComp.status === Component.Ready) {
-                        const newNetwork = apComp.createObject(root, {
-                            lastIpcObject: network
-                        });
-                        if (newNetwork) rNetworks.push(newNetwork);
-                    }
-                }
+                root.ipsByInterface = byName;
             }
         }
-    }
-    Process {
-        id: getInterfacesProc
-
-        command: ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"]
-        environment: ({
-                LANG: "C.UTF-8",
-                LC_ALL: "C.UTF-8"
-            })
-        running: true
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const lines = text.trim().split("\n").filter(line => line.length > 0);
-                const interfaceData = [];
-
-                for (const line of lines) {
-                    const parts = line.split(":");
-                    if (parts.length >= 3) {
-                        const name = parts[0];
-                        const type = parts[1];
-                        const state = parts[2];
-
-                        let interfaceType = type;
-                        if (type === "wifi" || type === "802-11-wireless") {
-                            interfaceType = "wifi";
-                        } else if (type === "ethernet") {
-                            interfaceType = "ethernet";
-                        }
-
-                        // Skip non-relevant interfaces
-                        if (interfaceType === "wifi" || interfaceType === "ethernet") {
-                            interfaceData.push({
-                                name: name,
-                                type: interfaceType,
-                                state: state,
-                                ip: ""  // Will be populated by getIpAddresses
-                            });
-                        }
-                    }
-                }
-
-                // Update interfaces list
-                const rInterfaces = root.interfaces;
-
-                // Remove interfaces that no longer exist
-                const destroyed = rInterfaces.filter(ri => !interfaceData.find(i => i.name === ri.name));
-                for (const iface of destroyed) {
-                    rInterfaces.splice(rInterfaces.indexOf(iface), 1).forEach(i => i.destroy());
-                }
-
-                // Add or update interfaces
-                for (const iface of interfaceData) {
-                    const match = rInterfaces.find(ri => ri.name === iface.name);
-                    if (match) {
-                        match.lastIpcObject = iface;
-                    } else if (ifaceComp.status === Component.Ready) {
-                        const newInterface = ifaceComp.createObject(root, {
-                            lastIpcObject: iface
-                        });
-                        if (newInterface) rInterfaces.push(newInterface);
-                    }
-                }
-
-                // Get IP addresses for connected interfaces
-                getIpAddresses.running = true;
-            }
-        }
-    }
-
-    Process {
-        id: getIpAddresses
-
-        command: ["bash", "-c", "for dev in $(nmcli -t -f DEVICE,STATE device | grep connected | cut -d: -f1); do ip=$(nmcli -t device show $dev | grep 'IP4.ADDRESS' | head -1 | cut -d: -f2 | cut -d/ -f1); if [ -n \"$ip\" ]; then echo \"$dev:$ip\"; fi; done"]
-        environment: ({
-                LANG: "C.UTF-8",
-                LC_ALL: "C.UTF-8"
-            })
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const lines = text.trim().split("\n").filter(line => line.length > 0);
-
-                for (const line of lines) {
-                    const parts = line.split(":");
-                    if (parts.length >= 2) {
-                        const deviceName = parts[0];
-                        const ip = parts[1];
-
-                        // Update the interface with IP address
-                        const iface = root.interfaces.find(i => i.name === deviceName);
-                        if (iface && ip) {
-                            const updatedObject = {
-                                name: iface.lastIpcObject.name,
-                                type: iface.lastIpcObject.type,
-                                state: iface.lastIpcObject.state,
-                                ip: ip
-                            };
-                            iface.lastIpcObject = updatedObject;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: ifaceComp
-
-        NetworkInterface {
-        }
-    }
-
-    Component {
-        id: apComp
-
-        AccessPoint {
-        }
-    }
-
-    component NetworkInterface: QtObject {
-        readonly property string name: lastIpcObject.name
-        readonly property string type: lastIpcObject.type
-        readonly property string state: lastIpcObject.state
-        readonly property string ip: lastIpcObject.ip
-        required property var lastIpcObject
-        readonly property bool isConnected: state === "connected"
-    }
-
-    component AccessPoint: QtObject {
-        readonly property bool active: lastIpcObject.active
-        readonly property string bssid: lastIpcObject.bssid
-        readonly property int frequency: lastIpcObject.frequency
-        readonly property bool isSecure: security.length > 0
-        required property var lastIpcObject
-        readonly property string security: lastIpcObject.security
-        readonly property string ssid: lastIpcObject.ssid
-        readonly property int strength: lastIpcObject.strength
     }
 }

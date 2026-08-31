@@ -24,14 +24,14 @@ Singleton {
             return "mic";
         return "mic_off";
     }
-    function getNetworkIcon(strength: int): string {
-        if (strength >= 80)
+    function getNetworkIcon(strength: real): string {
+        if (strength >= 0.8)
             return "signal_wifi_4_bar";
-        if (strength >= 60)
+        if (strength >= 0.6)
             return "network_wifi_3_bar";
-        if (strength >= 40)
+        if (strength >= 0.4)
             return "network_wifi_2_bar";
-        if (strength >= 20)
+        if (strength >= 0.2)
             return "network_wifi_1_bar";
         return "signal_wifi_0_bar";
     }

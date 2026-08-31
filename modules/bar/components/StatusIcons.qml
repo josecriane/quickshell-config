@@ -118,7 +118,7 @@ Rectangle {
                         if (Network.hasEthernetConnection)
                             return "lan";
                         if (Network.active)
-                            return Services.IconsService.getNetworkIcon(Network.active.strength ?? 0);
+                            return Services.IconsService.getNetworkIcon(Network.active.signalStrength ?? 0);
                         return "wifi_off";
                     }
                 }

@@ -82,7 +82,7 @@ Scope {
             return JSON.stringify({
                 wifiEnabled: Network.wifiEnabled,
                 connected: Network.hasWifiConnection,
-                ssid: Network.active?.ssid ?? "",
+                ssid: Network.active?.name ?? "",
                 wifiIp: Network.wifiIp,
                 ethernetIp: Network.ethernetIp,
                 hasEthernet: Network.hasEthernetConnection

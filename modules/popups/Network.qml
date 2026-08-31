@@ -8,6 +8,7 @@ import qs.ds.list as Lists
 import qs.ds.text as Text
 import qs.ds.icons as Icons
 import Quickshell
+import Quickshell.Networking as Net
 import QtQuick
 import QtQuick.Layouts
 
@@ -16,14 +17,19 @@ ColumnLayout {
 
     required property var wrapper
 
-    property string connectingToSsid: ""
-    property string pendingSsid: ""
+    property var connectingTo: null
+    property var pendingNetwork: null
     property bool showPasswordDialog: false
+
+    readonly property string pendingSsid: pendingNetwork?.name ?? ""
 
     property int margin: Foundations.spacing.xxs
 
     spacing: margin
     width: Math.max(320, implicitWidth)
+
+    Component.onCompleted: Network.acquireScanner()
+    Component.onDestruction: Network.releaseScanner()
 
     Text.HeadingS {
         Layout.rightMargin: root.margin
@@ -100,75 +106,59 @@ ColumnLayout {
     Repeater {
         model: ScriptModel {
             values: [...Network.networks].sort((a, b) => {
-                if (a.active !== b.active)
-                    return b.active - a.active;
-                return b.strength - a.strength;
+                if (a.connected !== b.connected)
+                    return b.connected - a.connected;
+                return b.signalStrength - a.signalStrength;
             }).slice(0, 8)
         }
 
         Lists.ListItem {
-            readonly property bool isConnecting: root.connectingToSsid === modelData.ssid
-            required property Network.AccessPoint modelData
+            readonly property bool isConnecting: root.connectingTo === modelData || modelData.stateChanging
+            required property Net.WifiNetwork modelData
 
             disabled: !Network.wifiEnabled
-            leftIcon: Services.IconsService.getNetworkIcon(modelData.strength)
-            primaryActionActive: modelData.active
+            leftIcon: Services.IconsService.getNetworkIcon(modelData.signalStrength)
+            primaryActionActive: modelData.connected
             primaryActionLoading: isConnecting
-            primaryFontIcon: modelData.active ? "link_off" : "link"
-            secondaryIcon: modelData.isSecure ? "lock" : ""
-            selected: modelData.active
-            text: modelData.ssid
+            primaryFontIcon: modelData.connected ? "link_off" : "link"
+            secondaryIcon: modelData.security === Net.WifiSecurityType.Open ? "" : "lock"
+            selected: modelData.connected
+            text: modelData.name
 
             onPrimaryActionClicked: {
-                if (modelData.active) {
-                    Network.disconnectFromNetwork();
+                if (modelData.connected) {
+                    modelData.disconnect();
                 } else {
-                    root.connectingToSsid = modelData.ssid;
-                    root.pendingSsid = modelData.ssid;
-                    Network.connectToNetwork(modelData.ssid, "");
-
-                    if (modelData.isSecure) {
-                        connectionCheckTimer.ssid = modelData.ssid;
-                        connectionCheckTimer.start();
-                    }
+                    root.connectingTo = modelData;
+                    root.pendingNetwork = modelData;
+                    modelData.connect();
                 }
             }
         }
     }
-    Buttons.PrimaryButton {
-        Layout.fillWidth: true
-        Layout.topMargin: root.margin
-        disabled: !Network.wifiEnabled
-        leftIcon: "wifi_find"
-        loading: Network.scanning
-        text: qsTr("Rescan networks")
 
-        onClicked: Network.rescanWifi()
-    }
+    Connections {
+        function onConnectionFailed(reason: int): void {
+            if (root.connectingTo !== root.pendingNetwork)
+                return;
 
-    // Timer to check if connection failed and show password dialog
-    Timer {
-        id: connectionCheckTimer
-        interval: 3000
-        repeat: false
-        property string ssid: ""
-
-        onTriggered: {
-            if (root.connectingToSsid === ssid && (!Network.active || Network.active.ssid !== ssid)) {
-                root.connectingToSsid = "";
-                root.pendingSsid = ssid;
+            root.connectingTo = null;
+            if (reason === Net.ConnectionFailReason.NoSecrets)
                 root.showPasswordDialog = true;
-            }
+            else
+                root.pendingNetwork = null;
         }
+
+        ignoreUnknownSignals: true
+        target: root.pendingNetwork
     }
 
     // Reset connecting state when network changes
     Connections {
         function onActiveChanged(): void {
-            if (Network.active && root.connectingToSsid === Network.active.ssid) {
-                root.connectingToSsid = "";
-                root.pendingSsid = "";
-                connectionCheckTimer.stop();
+            if (Network.active && root.connectingTo === Network.active) {
+                root.connectingTo = null;
+                root.pendingNetwork = null;
             }
         }
 
@@ -264,7 +254,7 @@ ColumnLayout {
 
                     onClicked: {
                         root.showPasswordDialog = false;
-                        root.pendingSsid = "";
+                        root.pendingNetwork = null;
                         if (root.wrapper) {
                             root.wrapper.needsFocus = false;
                         }
@@ -278,10 +268,9 @@ ColumnLayout {
                     enabled: passwordField.text.length > 0
 
                     onClicked: {
-                        root.connectingToSsid = root.pendingSsid;
-                        Network.connectToNetwork(root.pendingSsid, passwordField.text);
+                        root.connectingTo = root.pendingNetwork;
+                        root.pendingNetwork.connectWithPsk(passwordField.text);
                         root.showPasswordDialog = false;
-                        root.pendingSsid = "";
                         if (root.wrapper) {
                             root.wrapper.needsFocus = false;
                         }
