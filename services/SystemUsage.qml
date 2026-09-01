@@ -10,14 +10,18 @@ Singleton {
     property string autoGpuType: "NONE"
     property real cpuPerc
     property real cpuTemp
+    property string cpuTempPath
     property real gpuPerc
     property real gpuTemp
+    property string gpuTempPath
     readonly property string gpuType: autoGpuType
     property real lastCpuIdle
     property real lastCpuTotal
     readonly property real memPerc: memTotal > 0 ? memUsed / memTotal : 0
     property real memTotal
     property real memUsed
+    // Incremented by views that display GPU stats. Nothing in the bar uses
+    // them, so while this is 0 the GPU is not sampled at all.
     property int refCount
     property real storagePerc: storageTotal > 0 ? storageUsed / storageTotal : 0
     property real storageTotal
@@ -49,6 +53,17 @@ Singleton {
         };
     }
 
+    function refreshGpu(): void {
+        if (root.refCount <= 0)
+            return;
+
+        gpuUsage.running = true;
+        if (root.gpuTempPath)
+            gpuTempFile.reload();
+    }
+
+    onRefCountChanged: refreshGpu()
+
     Timer {
         interval: 3000
         repeat: true
@@ -58,10 +73,19 @@ Singleton {
         onTriggered: {
             stat.reload();
             meminfo.reload();
-            storage.running = true;
-            gpuUsage.running = true;
-            sensors.running = true;
+            if (root.cpuTempPath)
+                cpuTempFile.reload();
+            root.refreshGpu();
         }
+    }
+    // Storage barely moves, and unlike the rest it costs a process to read.
+    Timer {
+        interval: 60000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+
+        onTriggered: storage.running = true
     }
     FileView {
         id: stat
@@ -95,24 +119,74 @@ Singleton {
             root.memUsed = (root.memTotal - parseInt(data.match(/MemAvailable: *(\d+)/)[1], 10)) || 0;
         }
     }
+    // hwmon numbering is not stable across boots, so the sensor files are
+    // located once at startup. The shell only globs; the picking is done here.
+    Process {
+        id: hwmonProbe
+
+        command: ["sh", "-c", 'for d in /sys/class/hwmon/hwmon*; do n=$(cat "$d/name" 2>/dev/null) || continue; for t in "$d"/temp*_input; do [ -e "$t" ] || continue; echo "$n|$(cat "${t%_input}_label" 2>/dev/null)|$t"; done; done']
+        running: true
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const rows = text.trim().split("\n").filter(l => l !== "").map(l => {
+                    const [name, label, path] = l.split("|");
+                    return {
+                        name,
+                        label,
+                        path
+                    };
+                });
+
+                // First hwmon matching a known driver, preferring a known label
+                const pick = (drivers, labels) => {
+                    for (const label of labels) {
+                        const hit = rows.find(r => drivers.includes(r.name) && r.label === label);
+                        if (hit)
+                            return hit.path;
+                    }
+                    return rows.find(r => drivers.includes(r.name))?.path ?? "";
+                };
+
+                root.cpuTempPath = pick(["k10temp", "zenpower", "coretemp"], ["Tdie", "Package id 0", "Tctl"]);
+                root.gpuTempPath = pick(["amdgpu", "radeon", "i915", "xe"], ["edge", "junction"]);
+            }
+        }
+    }
+    FileView {
+        id: cpuTempFile
+
+        path: root.cpuTempPath
+
+        onLoaded: root.cpuTemp = parseInt(text(), 10) / 1000
+    }
+    FileView {
+        id: gpuTempFile
+
+        path: root.gpuTempPath
+
+        onLoaded: root.gpuTemp = parseInt(text(), 10) / 1000
+    }
     Process {
         id: storage
 
-        command: ["sh", "-c", "df | grep '^/dev/' | awk '{print $1, $3, $4}'"]
+        // -P guarantees one line per filesystem, -k guarantees 1 KiB blocks.
+        // Filtering here instead of through a pipeline saves three processes.
+        command: ["df", "-P", "-k"]
 
         stdout: StdioCollector {
             onStreamFinished: {
                 const deviceMap = new Map();
 
                 for (const line of text.trim().split("\n")) {
-                    if (line.trim() === "")
+                    if (!line.startsWith("/dev/"))
                         continue;
 
                     const parts = line.trim().split(/\s+/);
-                    if (parts.length >= 3) {
+                    if (parts.length >= 4) {
                         const device = parts[0];
-                        const used = parseInt(parts[1], 10) || 0;
-                        const avail = parseInt(parts[2], 10) || 0;
+                        const used = parseInt(parts[2], 10) || 0;
+                        const avail = parseInt(parts[3], 10) || 0;
 
                         // Only keep the entry with the largest total space for each device
                         if (!deviceMap.has(device) || (used + avail) > (deviceMap.get(device).used + deviceMap.get(device).avail)) {
@@ -166,54 +240,6 @@ Singleton {
                     root.gpuPerc = 0;
                     root.gpuTemp = 0;
                 }
-            }
-        }
-    }
-    Process {
-        id: sensors
-
-        command: ["sensors"]
-        environment: ({
-                LANG: "C.UTF-8",
-                LC_ALL: "C.UTF-8"
-            })
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let cpuTemp = text.match(/(?:Package id [0-9]+|Tdie):\s+((\+|-)[0-9.]+)(°| )C/);
-                if (!cpuTemp)
-                    // If AMD Tdie pattern failed, try fallback on Tctl
-                    cpuTemp = text.match(/Tctl:\s+((\+|-)[0-9.]+)(°| )C/);
-
-                if (cpuTemp)
-                    root.cpuTemp = parseFloat(cpuTemp[1]);
-
-                if (root.gpuType !== "GENERIC")
-                    return;
-
-                let eligible = false;
-                let sum = 0;
-                let count = 0;
-
-                for (const line of text.trim().split("\n")) {
-                    if (line === "Adapter: PCI adapter")
-                        eligible = true;
-                    else if (line === "")
-                        eligible = false;
-                    else if (eligible) {
-                        let match = line.match(/^(temp[0-9]+|GPU core|edge)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
-                        if (!match)
-                            // Fall back to junction/mem if GPU doesn't have edge temp (for AMD GPUs)
-                            match = line.match(/^(junction|mem)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
-
-                        if (match) {
-                            sum += parseFloat(match[2]);
-                            count++;
-                        }
-                    }
-                }
-
-                root.gpuTemp = count > 0 ? sum / count : 0;
             }
         }
     }

@@ -24,6 +24,10 @@ ColumnLayout {
     spacing: padding
     width: 400
 
+    // Keeps SystemUsage sampling the GPU only while this popup exists
+    Component.onCompleted: SystemUsage.refCount++
+    Component.onDestruction: SystemUsage.refCount--
+
     RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: padding
