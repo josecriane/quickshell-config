@@ -217,11 +217,16 @@ ColumnLayout {
 
                 Timer {
                     id: focusTimer
-                    interval: 1
+                    interval: 16
                     repeat: true
+                    triggeredOnStart: true
 
                     onTriggered: {
-                        if (passwordField.visible && root.showPasswordDialog) {
+                        if (!root.showPasswordDialog) {
+                            stop();
+                            return;
+                        }
+                        if (passwordField.visible) {
                             passwordField.forceActiveFocus();
                             passwordField.focus = true;
                             stop();

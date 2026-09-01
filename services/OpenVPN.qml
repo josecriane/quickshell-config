@@ -28,7 +28,7 @@ Singleton {
     // Private properties for internal state management
     property Timer statusTimer: Timer {
         interval: 5000 // Check status every 5 seconds
-        running: true
+        running: root.serviceName !== ""
         repeat: true
         onTriggered: root.refreshStatus()
     }
@@ -230,6 +230,7 @@ Singleton {
     }
 
     function refreshStatus() {
+        if (root.serviceName === "") return;
         if (statusProcess.running) return;
         statusProcess.running = true;
     }
