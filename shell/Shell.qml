@@ -1,10 +1,12 @@
 pragma ComponentBehavior: Bound
 
 import qs.services
+import qs.services as Services
 import qs.ds
 import qs.modules.bar
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Wayland as Wl
 import QtQuick
 import QtQuick.Effects
 import qs.ds.animations
@@ -50,6 +52,10 @@ Variants {
                 y: bar.implicitHeight
             }
 
+            Wl.IdleInhibitor {
+                enabled: Services.IdleInhibitor.enabled
+                window: win
+            }
             Variants {
                 id: regions
 

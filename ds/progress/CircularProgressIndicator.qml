@@ -8,7 +8,7 @@ import qs.ds.animations
 BusyIndicator {
     id: root
 
-    property string animState
+    property string animState: "stopped"
     property color bgColour: Foundations.palette.base04
     property color fgColour: Foundations.palette.base05
     property real implicitSize: Foundations.font.size.m * 3
@@ -43,6 +43,10 @@ BusyIndicator {
         }
     }
 
+    Component.onCompleted: {
+        if (root.running)
+            root.animState = "running";
+    }
     onRunningChanged: {
         if (running) {
             updater.completeEndProgress = 0;
@@ -61,7 +65,7 @@ BusyIndicator {
         from: 0
         loops: Animation.Infinite
         property: "progress"
-        running: root.animState !== "stopped"
+        running: root.animState === "running" || root.animState === "completing"
         target: updater
         to: 1
     }

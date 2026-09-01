@@ -3,7 +3,7 @@ import Quickshell
 import "./fzf.js" as Fzf
 import QtQuick
 
-Singleton {
+Scope {
     readonly property var fzf: new Fzf.Finder(list, Object.assign({selector}, ({})))
     property string key: "name"
 

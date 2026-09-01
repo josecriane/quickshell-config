@@ -85,7 +85,7 @@ Scope {
         }
         function status(): string {
             if (Network.hasEthernetConnection) return "ethernet";
-            if (Network.active) return `wifi: ${Network.active.ssid} (${Network.active.strength}%)`;
+            if (Network.active) return `wifi: ${Network.active.name} (${Math.round(Network.active.signalStrength * 100)}%)`;
             return "disconnected";
         }
 
