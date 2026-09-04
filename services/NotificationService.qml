@@ -78,7 +78,8 @@ Singleton {
     function clearNotifications() {
         root.popups = []
         root.queuedPopups = []
-        for (const notification of root.notifications)
+        const toDismiss = Array.from(root.notifications)
+        for (const notification of toDismiss)
             notification.dismiss()
     }
 
