@@ -14,24 +14,45 @@ Search {
     readonly property string ageIdentityPath: ConfigsJson.keepass.ageIdentityPath
     readonly property string dbPath: ConfigsJson.keepass.databasePath
 
-    readonly property string otpPrefix: "?:otp "
-    property bool isOtpMode: false
+    readonly property string otpPrefix: prefix + "o"
+    readonly property string usernamePrefix: prefix + "u"
+    property string mode: "password"
+
+    function modeFor(search: string): string {
+        if (search === otpPrefix || search.startsWith(otpPrefix + " "))
+            return "otp";
+        if (search === usernamePrefix || search.startsWith(usernamePrefix + " "))
+            return "username";
+        return "password";
+    }
+
+    function stripPrefix(search: string, used: string): string {
+        const rest = search.slice(used.length);
+        return rest.startsWith(" ") ? rest.slice(1) : rest;
+    }
 
     function search(search: string): list<var> {
-        isOtpMode = search.startsWith(otpPrefix);
-        if ((search === prefix || search === otpPrefix) && encryptedPasswordPath && ageIdentityPath && dbPath) {
+        mode = modeFor(search);
+        const isBare = search === prefix || search === otpPrefix || search === usernamePrefix;
+        if (isBare && encryptedPasswordPath && ageIdentityPath && dbPath) {
             loadEntries();
         }
         const results = query(search);
-        if (isOtpMode) {
+        if (mode === "otp") {
             return results.filter(item => item.hasOtp);
+        }
+        if (mode === "username") {
+            return results.filter(item => item.entryUsername);
         }
         return results;
     }
 
     function transformSearch(search: string): string {
-        if (search.startsWith(otpPrefix)) {
-            return search.slice(otpPrefix.length);
+        if (mode === "otp") {
+            return stripPrefix(search, otpPrefix);
+        }
+        if (mode === "username") {
+            return stripPrefix(search, usernamePrefix);
         }
         return search.slice(prefix.length);
     }
@@ -89,7 +110,9 @@ Search {
             readonly property bool hasOtp: modelData.split('\t')[2] === "1"
 
             function onActivate() {
-                if (root.isOtpMode) {
+                if (root.mode === "username") {
+                    Quickshell.execDetached(["wl-copy", "--", entryUsername]);
+                } else if (root.mode === "otp") {
                     Quickshell.execDetached(["bash", "-c", `SECRET=$(keepassxc-cli show -t -q "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n'); printf '%s' "$SECRET" | wl-copy; (sleep 15 && [[ "$(wl-paste -n 2>/dev/null)" == "$SECRET" ]] && wl-copy "") &`]);
                 } else {
                     Quickshell.execDetached(["bash", "-c", `SECRET=$(keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n'); printf '%s' "$SECRET" | wl-copy; (sleep 15 && [[ "$(wl-paste -n 2>/dev/null)" == "$SECRET" ]] && wl-copy "") &`]);
@@ -98,10 +121,16 @@ Search {
             }
 
             autocompleteText: ""
-            fontIcon: root.isOtpMode ? "timer" : "key"
+            fontIcon: root.mode === "otp" ? "timer" : (root.mode === "username" ? "person" : "key")
             isAction: true
             name: entryName
-            subtitle: root.isOtpMode ? "OTP code" : (entryUsername || "Password entry")
+            subtitle: {
+                if (root.mode === "otp")
+                    return "OTP code";
+                if (root.mode === "username")
+                    return entryUsername;
+                return entryUsername || "Password entry";
+            }
         }
     }
 }
