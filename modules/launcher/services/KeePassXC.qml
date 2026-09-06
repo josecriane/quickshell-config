@@ -14,21 +14,16 @@ Search {
     readonly property string ageIdentityPath: ConfigsJson.keepass.ageIdentityPath
     readonly property string dbPath: ConfigsJson.keepass.databasePath
 
-    readonly property string otpPrefix: prefix + "o"
-    readonly property string usernamePrefix: prefix + "u"
+    readonly property string otpPrefix: prefix + "o "
+    readonly property string usernamePrefix: prefix + "u "
     property string mode: "password"
 
     function modeFor(search: string): string {
-        if (search === otpPrefix || search.startsWith(otpPrefix + " "))
+        if (search.startsWith(otpPrefix))
             return "otp";
-        if (search === usernamePrefix || search.startsWith(usernamePrefix + " "))
+        if (search.startsWith(usernamePrefix))
             return "username";
         return "password";
-    }
-
-    function stripPrefix(search: string, used: string): string {
-        const rest = search.slice(used.length);
-        return rest.startsWith(" ") ? rest.slice(1) : rest;
     }
 
     function search(search: string): list<var> {
@@ -49,10 +44,10 @@ Search {
 
     function transformSearch(search: string): string {
         if (mode === "otp") {
-            return stripPrefix(search, otpPrefix);
+            return search.slice(otpPrefix.length);
         }
         if (mode === "username") {
-            return stripPrefix(search, usernamePrefix);
+            return search.slice(usernamePrefix.length);
         }
         return search.slice(prefix.length);
     }
