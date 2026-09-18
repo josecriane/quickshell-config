@@ -11,12 +11,11 @@ import QtQuick.Controls
 
 ListView {
     id: root
-    
-    property LauncherServices.CommandLauncher commandsLauncher: LauncherServices.CommandLauncher {
-        commandPrefix: "!"
-        commandList: ConfigsJson.commands
+
+    property LauncherServices.Clipboard clipboardLauncher: LauncherServices.Clipboard {
+        prefix: "!"
     }
-    
+
     property LauncherServices.CommandLauncher sessionCommandsLauncher: LauncherServices.CommandLauncher {
         commandPrefix: "#"
         commandList: ConfigsJson.sessionCommands
@@ -24,7 +23,8 @@ ListView {
 
     property LauncherServices.Actions actionsLauncher: LauncherServices.Actions {
         prefix: ">"
-        commandList: ConfigsJson.interactiveCommands
+        commandList: ConfigsJson.commands
+        interactiveCommandList: ConfigsJson.interactiveCommands
     }
 
     property LauncherServices.KeePassXC keepassxcLauncher: LauncherServices.KeePassXC {
@@ -37,6 +37,8 @@ ListView {
     property int maxShown: 8
     property int margin: Foundations.spacing.s
     property var selectedAction: null
+
+    property int restoreIndex: -1
 
     bottomMargin: margin
     highlightMoveDuration: Foundations.duration.standard
@@ -52,8 +54,9 @@ ListView {
     state: {
         const text = searchText;
         const actionsPrefix = ">";
-        const commandsPrefix = "!";
+        const clipboardPrefix = "!";
         const sessionCommandsPrefix = "#";
+        const keepassxcPrefix = "?";
 
         if (text.startsWith(actionsPrefix)) {
             const interactiveCommands = ConfigsJson.interactiveCommands;
@@ -67,15 +70,14 @@ ListView {
             return "actions";
         }
 
-        if (text.startsWith(commandsPrefix)) {
-            return "commands";
+        if (text.startsWith(clipboardPrefix)) {
+            return "clipboard";
         }
 
         if (text.startsWith(sessionCommandsPrefix)) {
             return "sessionCommands";
         }
 
-        const keepassxcPrefix = "?";
         if (text.startsWith(keepassxcPrefix)) {
             return "keepassxc";
         }
@@ -109,8 +111,8 @@ ListView {
             switch (root.state) {
             case "actions":
                 return root.actionsLauncher.search(root.searchText);
-            case "commands":
-                return root.commandsLauncher.search(root.searchText);
+            case "clipboard":
+                return root.clipboardLauncher.search(root.searchText);
             case "sessionCommands":
                 return root.sessionCommandsLauncher.search(root.searchText);
             case "keepassxc":
@@ -122,7 +124,14 @@ ListView {
             }
         }
 
-        onValuesChanged: root.currentIndex = count > 0 ? 0 : -1
+        onValuesChanged: {
+            if (root.restoreIndex >= 0) {
+                root.currentIndex = Math.min(root.restoreIndex, count - 1);
+                root.restoreIndex = -1;
+            } else {
+                root.currentIndex = count > 0 ? 0 : -1;
+            }
+        }
     }
     move: ItemTransition {
     }
@@ -156,7 +165,7 @@ ListView {
             }
         },
         State {
-            name: "commands"
+            name: "clipboard"
 
             PropertyChanges {
                 root.delegate: actionItem

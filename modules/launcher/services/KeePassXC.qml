@@ -108,9 +108,9 @@ Search {
                 if (root.mode === "username") {
                     Quickshell.execDetached(["wl-copy", "--", entryUsername]);
                 } else if (root.mode === "otp") {
-                    Quickshell.execDetached(["bash", "-c", `SECRET=$(keepassxc-cli show -t -q "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n'); printf '%s' "$SECRET" | wl-copy; (sleep 15 && [[ "$(wl-paste -n 2>/dev/null)" == "$SECRET" ]] && wl-copy "") &`]);
+                    Quickshell.execDetached(["bash", "-c", `keepassxc-cli show -t -q "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n' | wl-copy --sensitive`]);
                 } else {
-                    Quickshell.execDetached(["bash", "-c", `SECRET=$(keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n'); printf '%s' "$SECRET" | wl-copy; (sleep 15 && [[ "$(wl-paste -n 2>/dev/null)" == "$SECRET" ]] && wl-copy "") &`]);
+                    Quickshell.execDetached(["bash", "-c", `keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n' | wl-copy --sensitive`]);
                 }
                 return true;
             }

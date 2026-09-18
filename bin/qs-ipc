@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Routed through the wrapped binary so the caller resolves --config exactly as
+# the running shell did: instances are looked up by md5 of the resolved
+# shell.qml path, so both sides have to land on the same path.
+exec @QUICKSHELL_CONFIG@ ipc "$@"

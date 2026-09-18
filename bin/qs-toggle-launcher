@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec @QS_IPC@ call launcher toggle "${1-}"

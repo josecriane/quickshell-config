@@ -28,15 +28,15 @@
           inherit system;
         }
       );
-    in
-    {
-      packages = forAllSystems (
+
+      configName = "qsc";
+
+      mkQuickshellConfigFor =
         system:
         let
           pkgs = nixpkgsFor.${system};
           quickshellPkg = quickshell.packages.${system}.default;
 
-          # Function to replace Stylix placeholders in QML files (similar to stylix-css)
           replaceStylixPlaceholders =
             content: stylix:
             if stylix == null then
@@ -84,176 +84,172 @@
                   (stylix.sansFont)
                 ]
                 content;
-
-          # Function to create quickshell config with optional commands files
-          mkQuickshellConfig =
-            {
-              commandsPath ? null,
-              sessionCommandsPath ? null,
-              interactiveCommandsPath ? null,
-              stylix ? null,
-              excludedAppsPath ? null,
-              keepassPath ? null,
-            }:
-            pkgs.stdenv.mkDerivation rec {
-              pname = "quickshell-config";
-              version = "0.1.0";
-
-              src = ./.;
-
-              nativeBuildInputs = [ pkgs.makeWrapper ];
-              buildInputs = [
-                quickshellPkg
-                pkgs.material-symbols
-              ];
-
-              installPhase = ''
-                # Copy all configuration files
-                mkdir -p $out/share/quickshell-config
-                cp -r ds modules services shell $out/share/quickshell-config/ 2>/dev/null || true
-                cp shell.qml $out/share/quickshell-config/
-
-                # Process Foundations.qml with Stylix replacement if available
-                ${
-                  if stylix != null then
-                    ''
-                        # Use template and replace placeholders
-                        cat > $out/share/quickshell-config/ds/Foundations.qml << 'EOF'
-                      ${replaceStylixPlaceholders (builtins.readFile ./ds/Foundations.qml.template) stylix}
-                      EOF
-                    ''
-                  else
-                    ''
-                      # Use original Foundations.qml as fallback
-                      [ -f ds/Foundations.qml ] && cp ds/Foundations.qml $out/share/quickshell-config/ds/
-                    ''
-                }
-
-                # Copy JSON files (use provided paths or default from source)
-                ${
-                  if commandsPath != null then
-                    ''cp ${commandsPath} $out/share/quickshell-config/commands.json''
-                  else
-                    ''
-                      if [ -f commands.json ]; then
-                        cp commands.json $out/share/quickshell-config/commands.json
-                      else
-                        echo '{"commands":[]}' > $out/share/quickshell-config/commands.json
-                      fi
-                    ''
-                }
-
-                ${
-                  if sessionCommandsPath != null then
-                    ''cp ${sessionCommandsPath} $out/share/quickshell-config/session-commands.json''
-                  else
-                    ''
-                      if [ -f session-commands.json ]; then
-                        cp session-commands.json $out/share/quickshell-config/session-commands.json
-                      else
-                        echo '{"commands":[]}' > $out/share/quickshell-config/session-commands.json
-                      fi
-                    ''
-                }
-
-                ${
-                  if interactiveCommandsPath != null then
-                    ''cp ${interactiveCommandsPath} $out/share/quickshell-config/interactive-commands.json''
-                  else
-                    ''
-                      if [ -f interactive-commands.json ]; then
-                        cp interactive-commands.json $out/share/quickshell-config/interactive-commands.json
-                      else
-                        echo '{"commands":[]}' > $out/share/quickshell-config/interactive-commands.json
-                      fi
-                    ''
-                }
-
-                ${
-                  if excludedAppsPath != null then
-                    ''cp ${excludedAppsPath} $out/share/quickshell-config/excluded-apps.json''
-                  else
-                    ''
-                      if [ -f excluded-apps.json ]; then
-                        cp excluded-apps.json $out/share/quickshell-config/excluded-apps.json
-                      else
-                        echo '{"excludedApps":[]}' > $out/share/quickshell-config/excluded-apps.json
-                      fi
-                    ''
-                }
-
-                ${
-                  if keepassPath != null then
-                    ''cp ${keepassPath} $out/share/quickshell-config/keepass.json''
-                  else
-                    ''
-                      if [ -f keepass.json ]; then
-                        cp keepass.json $out/share/quickshell-config/keepass.json
-                      else
-                        echo '{}' > $out/share/quickshell-config/keepass.json
-                      fi
-                    ''
-                }
-
-                # Create wrapper scripts
-                mkdir -p $out/bin
-
-                # Create fonts directory and symlink the fonts
-                mkdir -p $out/share/fonts
-                ln -s ${pkgs.material-symbols}/share/fonts/truetype $out/share/fonts/
-
-                # Main quickshell wrapper
-                makeWrapper ${quickshellPkg}/bin/quickshell $out/bin/quickshell-config \
-                  --add-flags "--config $out/share/quickshell-config" \
-                  --prefix QML2_IMPORT_PATH : "${quickshellPkg}/lib/qt-6/qml" \
-                  --prefix XDG_DATA_DIRS : "$out/share:${pkgs.material-symbols}/share"
-
-                # Launcher toggle script
-                cat > $out/bin/qs-toggle-launcher << EOF
-                #!/usr/bin/env bash
-                ${quickshellPkg}/bin/quickshell -c $out/share/quickshell-config ipc call drawers toggle launcher
-                EOF
-                chmod +x $out/bin/qs-toggle-launcher
-              '';
-
-              meta = with pkgs.lib; {
-                description = "Personal QuickShell configuration";
-                platforms = platforms.linux;
-              };
-            };
         in
         {
-          default = self.packages.${system}.quickshell-config;
+          commandsPath ? null,
+          sessionCommandsPath ? null,
+          interactiveCommandsPath ? null,
+          stylix ? null,
+          excludedAppsPath ? null,
+          keepassPath ? null,
+        }:
+        pkgs.stdenv.mkDerivation {
+          pname = "quickshell-config";
+          # Track the input revision so the store-path version string reflects
+          # the source. dirtyShortRev is set when the working tree has
+          # uncommitted changes; "dev" covers non-git source contexts.
+          version = self.shortRev or self.dirtyShortRev or "dev";
 
-          quickshell-config = mkQuickshellConfig { };
+          src = ./.;
 
-          # Function to create config with custom commands
-          withCommands = commandsPath: mkQuickshellConfig { inherit commandsPath; };
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          buildInputs = [
+            quickshellPkg
+            pkgs.material-symbols
+          ];
 
-          # Function to create config with both commands and session commands
-          withAllCommands =
-            {
-              commandsPath ? null,
-              sessionCommandsPath ? null,
-              interactiveCommandsPath ? null,
-              stylix ? null,
-              excludedAppsPath ? null,
-              keepassPath ? null,
-            }:
-            mkQuickshellConfig {
-              inherit
-                commandsPath
-                sessionCommandsPath
-                interactiveCommandsPath
-                stylix
-                excludedAppsPath
-                keepassPath
-                ;
-            };
-        }
-      );
+          installPhase = ''
+            configDir=$out/etc/xdg/quickshell/${configName}
+            mkdir -p $configDir
+            cp -r ds modules services shell $configDir/
+            cp shell.qml $configDir/
 
-      # Home Manager module
+            ${
+              if stylix != null then
+                ''
+                    cat > $configDir/ds/Foundations.qml << 'EOF'
+                  ${replaceStylixPlaceholders (builtins.readFile ./ds/Foundations.qml.template) stylix}
+                  EOF
+                ''
+              else
+                ''
+                  if [ -f ds/Foundations.qml ]; then
+                    cp ds/Foundations.qml $configDir/ds/
+                  else
+                    echo "ERROR: stylix is not configured and ds/Foundations.qml is not present." >&2
+                    exit 1
+                  fi
+                ''
+            }
+
+            ${
+              if commandsPath != null then
+                ''cp ${commandsPath} $configDir/commands.json''
+              else
+                ''
+                  if [ -f commands.json ]; then
+                    cp commands.json $configDir/commands.json
+                  else
+                    echo '{"commands":[]}' > $configDir/commands.json
+                  fi
+                ''
+            }
+
+            ${
+              if sessionCommandsPath != null then
+                ''cp ${sessionCommandsPath} $configDir/session-commands.json''
+              else
+                ''
+                  if [ -f session-commands.json ]; then
+                    cp session-commands.json $configDir/session-commands.json
+                  else
+                    echo '{"commands":[]}' > $configDir/session-commands.json
+                  fi
+                ''
+            }
+
+            ${
+              if interactiveCommandsPath != null then
+                ''cp ${interactiveCommandsPath} $configDir/interactive-commands.json''
+              else
+                ''
+                  if [ -f interactive-commands.json ]; then
+                    cp interactive-commands.json $configDir/interactive-commands.json
+                  else
+                    echo '{"commands":[]}' > $configDir/interactive-commands.json
+                  fi
+                ''
+            }
+
+            ${
+              if excludedAppsPath != null then
+                ''cp ${excludedAppsPath} $configDir/excluded-apps.json''
+              else
+                ''
+                  if [ -f excluded-apps.json ]; then
+                    cp excluded-apps.json $configDir/excluded-apps.json
+                  else
+                    echo '{"excludedApps":[]}' > $configDir/excluded-apps.json
+                  fi
+                ''
+            }
+
+            ${
+              if keepassPath != null then
+                ''cp ${keepassPath} $configDir/keepass.json''
+              else
+                ''
+                  if [ -f keepass.json ]; then
+                    cp keepass.json $configDir/keepass.json
+                  else
+                    echo '{}' > $configDir/keepass.json
+                  fi
+                ''
+            }
+
+            mkdir -p $out/bin
+
+            mkdir -p $out/share/fonts
+            ln -s ${pkgs.material-symbols}/share/fonts/truetype $out/share/fonts/
+
+            # Instances are keyed by md5 of the resolved shell.qml path, so
+            # selecting the config by store path yields a new key on every
+            # rebuild. --config ${configName} lets a stable XDG_CONFIG_HOME
+            # entry win instead; this store dir is only the fallback.
+            makeWrapper ${quickshellPkg}/bin/quickshell $out/bin/quickshell-config \
+              --add-flags "--config ${configName}" \
+              --prefix QML2_IMPORT_PATH : "${quickshellPkg}/lib/qt-6/qml" \
+              --prefix PATH : "${
+                pkgs.lib.makeBinPath [
+                  pkgs.cliphist
+                  pkgs.wl-clipboard
+                ]
+              }" \
+              --prefix XDG_DATA_DIRS : "$out/share:${pkgs.material-symbols}/share" \
+              --prefix XDG_CONFIG_DIRS : "$out/etc/xdg"
+
+            install -Dm755 bin/qs-ipc $out/bin/qs-ipc
+            substituteInPlace $out/bin/qs-ipc \
+              --replace-fail @QUICKSHELL_CONFIG@ $out/bin/quickshell-config
+
+            install -Dm755 bin/qs-toggle-launcher $out/bin/qs-toggle-launcher
+            substituteInPlace $out/bin/qs-toggle-launcher \
+              --replace-fail @QS_IPC@ $out/bin/qs-ipc
+          '';
+
+          meta = with pkgs.lib; {
+            description = "Personal QuickShell configuration";
+            platforms = platforms.linux;
+          };
+        };
+    in
+    {
+      # Per-system factory exposed under `lib`. Functions cannot live under
+      # `packages.<system>` because the flake schema rejects non-derivations
+      # there, which is also what makes `nix flake check` usable.
+      lib = forAllSystems (system: {
+        mkQuickshellConfig = mkQuickshellConfigFor system;
+      });
+
+      packages = forAllSystems (system: rec {
+        default = quickshell-config;
+        quickshell-config = mkQuickshellConfigFor system { };
+      });
+
+      checks = forAllSystems (system: {
+        build = self.packages.${system}.default;
+      });
+
       homeManagerModules.default =
         {
           config,
@@ -267,13 +263,12 @@
           };
 
           config = lib.mkIf config.programs.quickshell-config.enable {
-            home.packages = [ self.packages.${pkgs.system}.quickshell-config ];
+            home.packages = [ self.packages.${pkgs.stdenv.hostPlatform.system}.quickshell-config ];
           };
         };
 
-      # Overlay for easier integration
       overlays.default = final: prev: {
-        quickshell-config = self.packages.${final.system}.quickshell-config;
+        quickshell-config = self.packages.${final.stdenv.hostPlatform.system}.quickshell-config;
       };
     };
 }

@@ -81,7 +81,7 @@ Item {
             borderWidth: 0
             bottomPadding: Foundations.spacing.xs
             opacity: root.isExpanded ? 1 : 0
-            placeholderText: "Type >!# for actions/commands/session"
+            placeholderText: "Type > actions  ! clipboard  # session  ? passwords"
             text: root.visibilities.searchText
             topPadding: Foundations.spacing.xs
             visible: root.isExpanded
@@ -97,11 +97,20 @@ Item {
             }
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Return && (event.modifiers & Qt.ShiftModifier)) {
-                    // Check if current item is interactive (has a hintButton)
                     const list = root.visibilities.launcherList;
                     const currentItem = list?.currentItem;
                     if (currentItem && currentItem.hintButton) {
                         currentItem.hintButton.clicked();
+                        event.accepted = true;
+                    }
+                }
+
+                if (event.key === Qt.Key_Delete && (event.modifiers & Qt.ShiftModifier)) {
+                    const list = root.visibilities.launcherList;
+                    const onDelete = list?.currentItem?.modelData?.onDelete;
+                    if (onDelete) {
+                        list.restoreIndex = Math.max(0, list.currentIndex - 1);
+                        onDelete();
                         event.accepted = true;
                     }
                 }
@@ -204,9 +213,7 @@ Item {
             if (root.visibilities.launcher) {
                 focusTimer.start();
             } else {
-                // Clear search when launcher closes
                 root.visibilities.searchText = "";
-                // Reset list index
                 const list = root.visibilities.launcherList;
                 if (list) {
                     list.currentIndex = 0;

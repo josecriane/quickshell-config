@@ -26,6 +26,39 @@ Scope {
     }
 
     IpcHandler {
+        function close(): void {
+            Visibilities.getForActive().launcher = false;
+        }
+        function open(text: string): void {
+            const visibilities = Visibilities.getForActive();
+            visibilities.launcher = true;
+            visibilities.searchText = text;
+        }
+        function toggle(text: string): void {
+            const visibilities = Visibilities.getForActive();
+            if (visibilities.launcher) {
+                visibilities.launcher = false;
+            } else {
+                open(text);
+            }
+        }
+
+        target: "launcher"
+    }
+
+    IpcHandler {
+        function status(): string {
+            return IdleInhibitor.enabled ? "enabled" : "disabled";
+        }
+        function toggle(): string {
+            IdleInhibitor.enabled = !IdleInhibitor.enabled;
+            return IdleInhibitor.enabled ? "enabled" : "disabled";
+        }
+
+        target: "idleInhibitor"
+    }
+
+    IpcHandler {
         function dismiss(id: string): void {
             const nId = parseInt(id);
             for (const n of NotificationService.notifications) {
