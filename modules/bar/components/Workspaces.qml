@@ -14,13 +14,55 @@ Item {
     property bool hovered: false
     property bool isDestroying: false
     property real masterProgress: 0.0
+    readonly property int pillActiveWidth: 28
+    readonly property int pillFocusedWidth: 44
+    readonly property int pillHeight: 12
+    readonly property int pillIdleWidth: 16
     required property var screen
+    property real scrollAccumulated: 0
+    property int scrollPendingSteps: 0
+    property int scrollTargetRow: -1
     property int spacingBetweenPills: 8
     property ListModel workspaces: ListModel {
     }
 
     signal workspaceChanged(int workspaceId, color accentColor)
 
+    function focusedRow(): int {
+        for (let i = 0; i < workspaces.count; i++) {
+            if (workspaces.get(i).isFocused)
+                return i;
+        }
+        return -1;
+    }
+    function rowForId(id: int, from: int): int {
+        for (let i = from; i < workspaces.count; i++) {
+            if (workspaces.get(i).id === id)
+                return i;
+        }
+        return -1;
+    }
+    function stepScroll() {
+        if (root.scrollPendingSteps === 0) {
+            root.scrollTargetRow = -1;
+            return;
+        }
+        const step = root.scrollPendingSteps > 0 ? 1 : -1;
+        root.scrollPendingSteps -= step;
+        // niri's model lags behind the action, so a queued burst walks from
+        // the last requested row rather than the one the pills still show
+        const current = root.scrollTargetRow >= 0 ? root.scrollTargetRow : root.focusedRow();
+        const target = current - step;
+        if (current < 0 || target < 0 || target >= workspaces.count) {
+            root.scrollPendingSteps = 0;
+            root.scrollAccumulated = 0;
+            root.scrollTargetRow = -1;
+            return;
+        }
+        root.scrollTargetRow = target;
+        Niri.focusWorkspace(workspaces.get(target).idx);
+        scrollGuard.restart();
+    }
     function triggerUnifiedWave() {
         masterAnimation.restart();
     }
@@ -29,10 +71,8 @@ Item {
         for (let i = 0; i < workspaces.count; i++) {
             const ws = workspaces.get(i);
             const isFocused = ws.id === focusedId;
-            const isActive = isFocused;
-            if (ws.isFocused !== isFocused || ws.isActive !== isActive) {
+            if (ws.isFocused !== isFocused) {
                 workspaces.setProperty(i, "isFocused", isFocused);
-                workspaces.setProperty(i, "isActive", isActive);
                 if (isFocused) {
                     root.triggerUnifiedWave();
                     root.workspaceChanged(ws.id, root.activeColor);
@@ -41,39 +81,56 @@ Item {
         }
     }
     function updateWorkspaceList() {
-        const newList = Niri.workspaces || [];
-        workspaces.clear();
-        for (let i = 0; i < newList.length; i++) {
-            const ws = newList[i];
-            // Only show workspaces for this screen/monitor
-            if (ws.output === root.screen.name) {
-                // Check workspaces model on niri
-                workspaces.append({
-                    id: ws.id,
-                    idx: ws.idx,
-                    name: ws.name || "",
-                    output: ws.output,
-                    isActive: ws.is_active,
-                    isFocused: ws.is_focused,
-                    isUrgent: ws.is_urgent
-                });
+        const incoming = (Niri.workspaces || []).filter(ws => ws.output === root.screen.name);
+
+        for (let i = workspaces.count - 1; i >= 0; i--) {
+            if (!incoming.some(ws => ws.id === workspaces.get(i).id))
+                workspaces.remove(i);
+        }
+
+        for (let i = 0; i < incoming.length; i++) {
+            const ws = incoming[i];
+            const fields = {
+                id: ws.id,
+                idx: ws.idx,
+                name: ws.name || "",
+                output: ws.output,
+                isActive: ws.is_active === true,
+                isUrgent: ws.is_urgent === true,
+                occupied: ws.active_window_id !== null && ws.active_window_id !== undefined
+            };
+
+            const row = root.rowForId(ws.id, i);
+            if (row < 0) {
+                workspaces.insert(i, Object.assign({
+                    isFocused: false
+                }, fields));
+                continue;
+            }
+            if (row !== i)
+                workspaces.move(row, i, 1);
+
+            const current = workspaces.get(i);
+            for (const key in fields) {
+                if (current[key] !== fields[key])
+                    workspaces.setProperty(i, key, fields[key]);
             }
         }
+
         updateWorkspaceFocus();
     }
 
-    anchors.centerIn: parent
-    height: 30
-    width: {
+    implicitHeight: 30
+    implicitWidth: {
         let total = 0;
         for (let i = 0; i < workspaces.count; i++) {
             const ws = workspaces.get(i);
             if (ws.isFocused)
-                total += 44;
+                total += root.pillFocusedWidth;
             else if (ws.isActive)
-                total += 28;
+                total += root.pillActiveWidth;
             else
-                total += 16;
+                total += root.pillIdleWidth;
         }
         total += Math.max(workspaces.count - 1, 0) * spacingBetweenPills;
         total += horizontalPadding * 2;
@@ -122,13 +179,33 @@ Item {
             value: 0.0
         }
     }
+    Timer {
+        id: scrollGuard
+
+        interval: 80
+
+        onTriggered: root.stepScroll()
+    }
     Row {
         id: pillRow
 
         anchors.centerIn: parent
         spacing: spacingBetweenPills
-        width: root.width - horizontalPadding * 2
-        x: horizontalPadding
+
+        WheelHandler {
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+
+            onWheel: event => {
+                root.scrollAccumulated += event.angleDelta.y;
+                const steps = Math.trunc(root.scrollAccumulated / 120);
+                if (steps === 0)
+                    return;
+                root.scrollAccumulated -= steps * 120;
+                root.scrollPendingSteps += steps;
+                if (!scrollGuard.running)
+                    root.stepScroll();
+            }
+        }
 
         Repeater {
             model: root.workspaces
@@ -139,20 +216,26 @@ Item {
                 property bool isHovered: pillMouseArea.containsMouse
 
                 color: {
-                    if (model.isFocused) return activeColor;
-                    if (isHovered) return Qt.lighter(Foundations.palette.base02, 1.3);
+                    if (model.isFocused)
+                        return activeColor;
+                    if (model.isUrgent)
+                        return Foundations.palette.base08;
+                    if (isHovered)
+                        return Qt.lighter(Foundations.palette.base02, 1.3);
+                    if (model.occupied)
+                        return Qt.lighter(Foundations.palette.base02, 1.15);
                     return Foundations.palette.base02;
                 }
-                height: 12
-                radius: 6
+                height: root.pillHeight
+                radius: root.pillHeight / 2
                 scale: model.isFocused ? 1.0 : (isHovered ? 0.95 : 0.9)
                 width: {
                     if (model.isFocused)
-                        return 44;
+                        return root.pillFocusedWidth;
                     else if (model.isActive)
-                        return 28;
+                        return root.pillActiveWidth;
                     else
-                        return 16;
+                        return root.pillIdleWidth;
                 }
                 z: 0
 
@@ -175,20 +258,50 @@ Item {
                     }
                 }
 
-                MouseArea {
-                    id: pillMouseArea
-                    anchors.fill: parent
-                    anchors.margins: -4
-                    hoverEnabled: true
-                    cursorShape: model.isFocused ? Qt.ArrowCursor : Qt.PointingHandCursor
-                    onClicked: {
-                        if (!model.isFocused) {
-                            Niri.focusWorkspace(model.idx);
-                        }
+                SequentialAnimation {
+                    id: urgentPulse
+
+                    loops: Animation.Infinite
+                    running: model.isUrgent && !model.isFocused
+
+                    onStopped: workspacePill.opacity = 1.0
+
+                    NumberAnimation {
+                        duration: Foundations.duration.slow
+                        easing.type: Easing.InOutQuad
+                        property: "opacity"
+                        target: workspacePill
+                        to: 0.35
+                    }
+                    NumberAnimation {
+                        duration: Foundations.duration.slow
+                        easing.type: Easing.InOutQuad
+                        property: "opacity"
+                        target: workspacePill
+                        to: 1.0
                     }
                 }
 
-                // Burst effect overlay for focused pill (smaller outline)
+                MouseArea {
+                    id: pillMouseArea
+
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    cursorShape: model.isFocused ? Qt.ArrowCursor : Qt.PointingHandCursor
+                    hoverEnabled: true
+
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton) {
+                            Niri.moveWindowToWorkspace(model.idx);
+                            moveFlashAnimation.restart();
+                            return;
+                        }
+                        if (!model.isFocused)
+                            Niri.focusWorkspace(model.idx);
+                    }
+                }
+
                 Rectangle {
                     id: pillBurst
 
@@ -202,6 +315,27 @@ Item {
                     visible: root.effectsActive && model.isFocused
                     width: parent.width + 18 * root.masterProgress
                     z: 1
+                }
+
+                Rectangle {
+                    id: moveFlash
+
+                    anchors.fill: parent
+                    color: Foundations.palette.base0B
+                    opacity: 0
+                    radius: parent.radius
+                    z: 2
+
+                    NumberAnimation {
+                        id: moveFlashAnimation
+
+                        duration: Foundations.duration.standard
+                        easing.type: Easing.OutCubic
+                        from: 0.85
+                        property: "opacity"
+                        target: moveFlash
+                        to: 0
+                    }
                 }
             }
         }

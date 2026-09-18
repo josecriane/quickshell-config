@@ -56,6 +56,12 @@ Singleton {
         focusWorkspaceProcess.running = true;
     }
 
+    function moveWindowToWorkspace(workspaceIdx: int): void {
+        moveWindowProcess.command = ["niri", "msg", "action", "move-window-to-workspace", "--focus", "false", workspaceIdx.toString()];
+        moveWindowProcess.running = false;
+        moveWindowProcess.running = true;
+    }
+
     function updateFocusedOutput(): void {
         focusedOutputProcess.running = false;
         focusedOutputProcess.running = true;
@@ -115,6 +121,12 @@ Singleton {
 
     Process {
         id: focusWorkspaceProcess
+
+        running: false
+    }
+
+    Process {
+        id: moveWindowProcess
 
         running: false
     }
