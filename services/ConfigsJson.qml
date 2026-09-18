@@ -11,6 +11,7 @@ Singleton {
     property alias sessionCommands: sessionCommandsAdapter.commands
     property alias interactiveCommands: interactiveCommandsAdapter.commands
     property alias excludedDesktops: excludedDesktopsAdapter.excludedApps
+    property alias binds: bindsAdapter.binds
     property alias keepass: keepassAdapter
 
     property FileView commandsFile: FileView {
@@ -55,6 +56,17 @@ Singleton {
             id: excludedDesktopsAdapter
 
             property var excludedApps: []
+        }
+    }
+
+    property FileView bindsFile: FileView {
+        path: `${Quickshell.shellDir}/binds.json`
+        watchChanges: true
+
+        JsonAdapter {
+            id: bindsAdapter
+
+            property var binds: []
         }
     }
 

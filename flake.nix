@@ -92,6 +92,7 @@
           stylix ? null,
           excludedAppsPath ? null,
           keepassPath ? null,
+          bindsPath ? null,
         }:
         pkgs.stdenv.mkDerivation {
           pname = "quickshell-config";
@@ -180,6 +181,19 @@
                     cp excluded-apps.json $configDir/excluded-apps.json
                   else
                     echo '{"excludedApps":[]}' > $configDir/excluded-apps.json
+                  fi
+                ''
+            }
+
+            ${
+              if bindsPath != null then
+                ''cp ${bindsPath} $configDir/binds.json''
+              else
+                ''
+                  if [ -f binds.json ]; then
+                    cp binds.json $configDir/binds.json
+                  else
+                    echo '{"binds":[]}' > $configDir/binds.json
                   fi
                 ''
             }

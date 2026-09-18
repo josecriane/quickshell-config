@@ -30,6 +30,11 @@ ListView {
     property LauncherServices.KeePassXC keepassxcLauncher: LauncherServices.KeePassXC {
         prefix: "?"
     }
+
+    property LauncherServices.Binds bindsLauncher: LauncherServices.Binds {
+        prefix: "/"
+        bindList: ConfigsJson.binds
+    }
     required property string searchText
     required property PersistentProperties visibilities
 
@@ -57,6 +62,7 @@ ListView {
         const clipboardPrefix = "!";
         const sessionCommandsPrefix = "#";
         const keepassxcPrefix = "?";
+        const bindsPrefix = "/";
 
         if (text.startsWith(actionsPrefix)) {
             const interactiveCommands = ConfigsJson.interactiveCommands;
@@ -80,6 +86,10 @@ ListView {
 
         if (text.startsWith(keepassxcPrefix)) {
             return "keepassxc";
+        }
+
+        if (text.startsWith(bindsPrefix)) {
+            return "binds";
         }
 
         return "apps";
@@ -117,6 +127,8 @@ ListView {
                 return root.sessionCommandsLauncher.search(root.searchText);
             case "keepassxc":
                 return root.keepassxcLauncher.search(root.searchText);
+            case "binds":
+                return root.bindsLauncher.search(root.searchText);
             case "interactive":
                 return [0];
             default:
@@ -180,6 +192,13 @@ ListView {
         },
         State {
             name: "keepassxc"
+
+            PropertyChanges {
+                root.delegate: actionItem
+            }
+        },
+        State {
+            name: "binds"
 
             PropertyChanges {
                 root.delegate: actionItem

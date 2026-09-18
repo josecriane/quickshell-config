@@ -13,7 +13,6 @@ Item {
 
     property string activeAppId: activeToplevel?.appId ?? ""
 
-    // Propiedades que se actualizarán con binding
     property string activeTitle: activeToplevel?.title ?? ""
     property Toplevel activeToplevel: ToplevelManager.activeToplevel
     property color colour: Foundations.palette.base05
