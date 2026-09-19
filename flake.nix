@@ -271,13 +271,61 @@
           pkgs,
           ...
         }:
+        let
+          cfg = config.programs.quickshell-config;
+          mkPath =
+            description:
+            lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+              inherit description;
+            };
+        in
         {
           options.programs.quickshell-config = {
             enable = lib.mkEnableOption "quickshell-config";
+
+            commandsPath = mkPath "Path to commands.json (one-shot launcher commands).";
+            sessionCommandsPath = mkPath "Path to session-commands.json (lock, reboot, poweroff).";
+            interactiveCommandsPath = mkPath "Path to interactive-commands.json (calculator, base64, shell).";
+            excludedAppsPath = mkPath "Path to excluded-apps.json (desktop entries hidden from the launcher).";
+            keepassPath = mkPath "Path to keepass.json (database, age identity and encrypted password).";
+            bindsPath = mkPath "Path to binds.json (compositor keybinds listed in the launcher).";
+
+            stylix = lib.mkOption {
+              type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
+              default = null;
+              description = ''
+                base16 palette plus monoFont and sansFont, used to render
+                ds/Foundations.qml from its template. Null falls back to the
+                Foundations.qml committed in the source tree.
+              '';
+            };
+
+            package = lib.mkOption {
+              type = lib.types.package;
+              readOnly = true;
+              description = ''
+                The built derivation, so other modules can point keybinds at
+                the same one this module installs. Set the options above to
+                influence what it contains.
+              '';
+              default = self.lib.${pkgs.stdenv.hostPlatform.system}.mkQuickshellConfig {
+                inherit (cfg)
+                  commandsPath
+                  sessionCommandsPath
+                  interactiveCommandsPath
+                  excludedAppsPath
+                  keepassPath
+                  bindsPath
+                  stylix
+                  ;
+              };
+            };
           };
 
-          config = lib.mkIf config.programs.quickshell-config.enable {
-            home.packages = [ self.packages.${pkgs.stdenv.hostPlatform.system}.quickshell-config ];
+          config = lib.mkIf cfg.enable {
+            home.packages = [ cfg.package ];
           };
         };
 
