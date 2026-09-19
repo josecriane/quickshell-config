@@ -18,7 +18,6 @@ Search {
 
     function search(search: string): list<var> {
         if (search === root.prefix) {
-            reload();
             return [...query(search)].sort((a, b) => b.entryId - a.entryId);
         }
         return query(search);

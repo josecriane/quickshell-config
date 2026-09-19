@@ -9,7 +9,7 @@ Singleton {
     id: root
 
     property int currentKbLayoutIndex: 0
-    property string focusedOutput: ""
+    readonly property string focusedOutput: workspaces[focusedWorkspaceIndex]?.output ?? ""
     property int focusedWorkspaceIndex: 0
     property bool inOverview: false
     property list<string> kbLayouts: []
@@ -62,14 +62,8 @@ Singleton {
         moveWindowProcess.running = true;
     }
 
-    function updateFocusedOutput(): void {
-        focusedOutputProcess.running = false;
-        focusedOutputProcess.running = true;
-    }
-
     Component.onCompleted: {
         layoutsInitProcess.running = true;
-        updateFocusedOutput();
     }
 
     Process {
@@ -104,10 +98,6 @@ Singleton {
                     }
                 } else if (event.KeyboardLayoutSwitched) {
                     root.currentKbLayoutIndex = event.KeyboardLayoutSwitched.idx;
-                }
-
-                if (event.WorkspaceActivated || event.WindowFocusChanged || event.WindowOpenedOrClosed) {
-                    root.updateFocusedOutput();
                 }
             }
         }
@@ -153,23 +143,6 @@ Singleton {
         id: spawnProcess
 
         running: false
-    }
-
-    Process {
-        id: focusedOutputProcess
-
-        command: ["niri", "msg", "focused-output"]
-        running: false
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const firstLine = text.split("\n")[0];
-                const match = firstLine.match(/\(([^)]+)\)/);
-                if (match) {
-                    root.focusedOutput = match[1];
-                }
-            }
-        }
     }
 
     Process {

@@ -95,6 +95,11 @@ ListView {
         return "apps";
     }
 
+    onStateChanged: {
+        if (state === "clipboard")
+            root.clipboardLauncher.reload();
+    }
+
     ScrollBar.vertical: List.ScrollBar {
     }
     add: Transition {
