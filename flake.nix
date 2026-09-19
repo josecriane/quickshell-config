@@ -92,7 +92,6 @@
           stylix ? null,
           excludedAppsPath ? null,
           keepassPath ? null,
-          bindsPath ? null,
         }:
         pkgs.stdenv.mkDerivation {
           pname = "quickshell-config";
@@ -181,19 +180,6 @@
                     cp excluded-apps.json $configDir/excluded-apps.json
                   else
                     echo '{"excludedApps":[]}' > $configDir/excluded-apps.json
-                  fi
-                ''
-            }
-
-            ${
-              if bindsPath != null then
-                ''cp ${bindsPath} $configDir/binds.json''
-              else
-                ''
-                  if [ -f binds.json ]; then
-                    cp binds.json $configDir/binds.json
-                  else
-                    echo '{"binds":[]}' > $configDir/binds.json
                   fi
                 ''
             }
@@ -290,7 +276,6 @@
             interactiveCommandsPath = mkPath "Path to interactive-commands.json (calculator, base64, shell).";
             excludedAppsPath = mkPath "Path to excluded-apps.json (desktop entries hidden from the launcher).";
             keepassPath = mkPath "Path to keepass.json (database, age identity and encrypted password).";
-            bindsPath = mkPath "Path to binds.json (compositor keybinds listed in the launcher).";
 
             stylix = lib.mkOption {
               type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);
@@ -317,7 +302,6 @@
                   interactiveCommandsPath
                   excludedAppsPath
                   keepassPath
-                  bindsPath
                   stylix
                   ;
               };

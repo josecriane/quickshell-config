@@ -81,7 +81,7 @@ Item {
             borderWidth: 0
             bottomPadding: Foundations.spacing.xs
             opacity: root.isExpanded ? 1 : 0
-            placeholderText: "Type > actions  ! clipboard  # session  ? passwords  / keys"
+            placeholderText: "Type > actions  ! clipboard  # session  ? passwords"
             text: root.visibilities.searchText
             topPadding: Foundations.spacing.xs
             visible: root.isExpanded
