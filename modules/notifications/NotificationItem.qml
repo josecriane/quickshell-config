@@ -25,9 +25,12 @@ Rectangle {
     readonly property int imageDimension: 41
     readonly property int iconDimension: 20
 
+    readonly property bool hasPreview: image.startsWith("file://")
+    readonly property int previewHeight: 160
+
     readonly property bool hasAppIcon: notification.appIcon !== ""
-    readonly property bool hasImage: notification.image !== ""
-    readonly property int nonAnimHeight: summaryView.implicitHeight + appNameRow.height + body.height + (replyLoader.active ? replyLoader.height + margin : 0) + inner.anchors.margins * 2
+    readonly property bool hasImage: notification.image !== "" && !hasPreview
+    readonly property int nonAnimHeight: summaryView.implicitHeight + appNameRow.height + body.height + (previewLoader.active ? previewLoader.height + margin : 0) + (replyLoader.active ? replyLoader.height + margin : 0) + inner.anchors.margins * 2
 
     // Safe properties with defaults
     readonly property string appIcon: notification.appIcon ?? ""
@@ -207,13 +210,40 @@ Rectangle {
             }
 
             Loader {
+                id: previewLoader
+
+                active: root.hasPreview
+                anchors.left: summaryView.left
+                anchors.right: parent.right
+                anchors.rightMargin: margin
+                anchors.top: body.bottom
+                anchors.topMargin: active ? margin : 0
+                asynchronous: true
+                height: active ? root.previewHeight : 0
+                visible: active
+
+                sourceComponent: ClippingRectangle {
+                    radius: Foundations.radius.s
+
+                    Image {
+                        anchors.fill: parent
+                        asynchronous: true
+                        cache: false
+                        fillMode: Image.PreserveAspectCrop
+                        source: root.image
+                        sourceSize.height: root.previewHeight * 2
+                    }
+                }
+            }
+
+            Loader {
                 id: replyLoader
 
                 active: root.notification.hasInlineReply
                 anchors.left: summaryView.left
                 anchors.right: parent.right
                 anchors.rightMargin: margin
-                anchors.top: body.bottom
+                anchors.top: previewLoader.bottom
                 anchors.topMargin: active ? margin : 0
                 asynchronous: true
                 visible: active

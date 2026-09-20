@@ -19,8 +19,11 @@ Rectangle {
 
     readonly property int margin: Foundations.spacing.xs
     readonly property int imageDimension: 32
+    readonly property int previewHeight: 120
 
-    readonly property bool hasImage: notification.image !== ""
+    readonly property string image: notification.image ?? ""
+    readonly property bool hasPreview: image.startsWith("file://")
+    readonly property bool hasImage: image !== "" && !hasPreview
     readonly property string summary: notification.summary ?? ""
     readonly property string body: notification.body ?? ""
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
@@ -32,7 +35,7 @@ Rectangle {
     }
     radius: Foundations.radius.xs
     implicitWidth: notificationWidth
-    implicitHeight: contentRow.implicitHeight + margin * 2
+    implicitHeight: content.implicitHeight + margin * 2
 
     Behavior on color {
         BasicColorAnimation {
@@ -47,19 +50,120 @@ Rectangle {
         notification: root.notification
     }
 
-    RowLayout {
-        id: contentRow
+    ColumnLayout {
+        id: content
 
         anchors.fill: parent
         anchors.margins: margin
-        spacing: Foundations.spacing.s
+        spacing: Foundations.spacing.xs
 
-        // Image/icon
+        RowLayout {
+            id: contentRow
+
+            Layout.fillWidth: true
+            spacing: Foundations.spacing.s
+
+            // Image/icon
+            Loader {
+                active: root.hasImage
+                Layout.preferredWidth: root.imageDimension
+                Layout.preferredHeight: root.imageDimension
+                Layout.alignment: Qt.AlignTop
+
+                sourceComponent: ClippingRectangle {
+                    radius: Foundations.radius.xs
+
+                    Image {
+                        anchors.fill: parent
+                        asynchronous: true
+                        cache: false
+                        fillMode: Image.PreserveAspectCrop
+                        source: Qt.resolvedUrl(root.notification.image)
+                    }
+                }
+            }
+
+            // Text content
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+
+                DsText.BodyM {
+                    Layout.fillWidth: true
+                    text: summaryMetrics.elidedText
+                    maximumLineCount: 1
+                    color: root.isCritical ? Foundations.palette.base08 : Foundations.palette.base06
+                }
+
+                TextMetrics {
+                    id: summaryMetrics
+                    elide: Text.ElideRight
+                    elideWidth: root.notificationWidth - root.imageDimension - root.margin * 4 - (root.showDismiss ? 24 : 0)
+                    font.family: Foundations.font.family.sans
+                    font.pointSize: Foundations.font.size.m
+                    text: root.summary
+                }
+
+                DsText.BodyS {
+                    Layout.fillWidth: true
+                    text: bodyMetrics.elidedText
+                    maximumLineCount: 2
+                    wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    color: Foundations.palette.base05
+                    visible: root.body !== ""
+                }
+
+                TextMetrics {
+                    id: bodyMetrics
+                    elide: Text.ElideRight
+                    elideWidth: root.notificationWidth - root.imageDimension - root.margin * 4 - (root.showDismiss ? 24 : 0)
+                    font.family: Foundations.font.family.sans
+                    font.pointSize: Foundations.font.size.s
+                    text: root.body.replace(/\n/g, " ")
+                }
+            }
+
+            // Dismiss button (shows on row hover)
+            Rectangle {
+                id: dismissButton
+
+                visible: root.showDismiss
+                opacity: mouseArea.containsMouse ? 1 : 0
+                Layout.preferredWidth: 20
+                Layout.preferredHeight: 20
+                Layout.alignment: Qt.AlignVCenter
+                radius: 10
+                color: dismissArea.containsMouse ? Foundations.palette.base08 : Foundations.palette.base03
+
+                Behavior on opacity {
+                    BasicNumberAnimation {
+                        duration: Foundations.duration.fast
+                    }
+                }
+
+                Icons.MaterialFontIcon {
+                    anchors.centerIn: parent
+                    text: "close"
+                    color: dismissArea.containsMouse ? Foundations.palette.base07 : Foundations.palette.base05
+                    font.pointSize: Foundations.font.size.xs
+                }
+
+                MouseArea {
+                    id: dismissArea
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.notification.dismiss()
+                }
+            }
+        }
+
         Loader {
-            active: root.hasImage
-            Layout.preferredWidth: root.imageDimension
-            Layout.preferredHeight: root.imageDimension
-            Layout.alignment: Qt.AlignTop
+            active: root.hasPreview
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.hasPreview ? root.previewHeight : 0
+            asynchronous: true
 
             sourceComponent: ClippingRectangle {
                 radius: Foundations.radius.xs
@@ -69,83 +173,9 @@ Rectangle {
                     asynchronous: true
                     cache: false
                     fillMode: Image.PreserveAspectCrop
-                    source: Qt.resolvedUrl(root.notification.image)
+                    source: root.image
+                    sourceSize.height: root.previewHeight * 2
                 }
-            }
-        }
-
-        // Text content
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 2
-
-            DsText.BodyM {
-                Layout.fillWidth: true
-                text: summaryMetrics.elidedText
-                maximumLineCount: 1
-                color: root.isCritical ? Foundations.palette.base08 : Foundations.palette.base06
-            }
-
-            TextMetrics {
-                id: summaryMetrics
-                elide: Text.ElideRight
-                elideWidth: root.notificationWidth - root.imageDimension - root.margin * 4 - (root.showDismiss ? 24 : 0)
-                font.family: Foundations.font.family.sans
-                font.pointSize: Foundations.font.size.m
-                text: root.summary
-            }
-
-            DsText.BodyS {
-                Layout.fillWidth: true
-                text: bodyMetrics.elidedText
-                maximumLineCount: 2
-                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                color: Foundations.palette.base05
-                visible: root.body !== ""
-            }
-
-            TextMetrics {
-                id: bodyMetrics
-                elide: Text.ElideRight
-                elideWidth: root.notificationWidth - root.imageDimension - root.margin * 4 - (root.showDismiss ? 24 : 0)
-                font.family: Foundations.font.family.sans
-                font.pointSize: Foundations.font.size.s
-                text: root.body.replace(/\n/g, " ")
-            }
-        }
-
-        // Dismiss button (shows on row hover)
-        Rectangle {
-            id: dismissButton
-
-            visible: root.showDismiss
-            opacity: mouseArea.containsMouse ? 1 : 0
-            Layout.preferredWidth: 20
-            Layout.preferredHeight: 20
-            Layout.alignment: Qt.AlignVCenter
-            radius: 10
-            color: dismissArea.containsMouse ? Foundations.palette.base08 : Foundations.palette.base03
-
-            Behavior on opacity {
-                BasicNumberAnimation {
-                    duration: Foundations.duration.fast
-                }
-            }
-
-            Icons.MaterialFontIcon {
-                anchors.centerIn: parent
-                text: "close"
-                color: dismissArea.containsMouse ? Foundations.palette.base07 : Foundations.palette.base05
-                font.pointSize: Foundations.font.size.xs
-            }
-
-            MouseArea {
-                id: dismissArea
-                anchors.fill: parent
-                anchors.margins: -4
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.notification.dismiss()
             }
         }
     }
