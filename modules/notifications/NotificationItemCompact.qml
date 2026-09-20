@@ -22,7 +22,9 @@ Rectangle {
     readonly property int previewHeight: 120
 
     readonly property string image: notification.image ?? ""
-    readonly property bool hasPreview: image.startsWith("file://")
+    readonly property string appIcon: notification.appIcon ?? ""
+    readonly property string previewSource: root.image.startsWith("file://") ? root.image : (root.appIcon.startsWith("file://") ? root.appIcon : "")
+    readonly property bool hasPreview: previewSource !== ""
     readonly property bool hasImage: image !== "" && !hasPreview
     readonly property string summary: notification.summary ?? ""
     readonly property string body: notification.body ?? ""
@@ -173,7 +175,7 @@ Rectangle {
                     asynchronous: true
                     cache: false
                     fillMode: Image.PreserveAspectCrop
-                    source: root.image
+                    source: root.previewSource
                     sourceSize.height: root.previewHeight * 2
                 }
             }

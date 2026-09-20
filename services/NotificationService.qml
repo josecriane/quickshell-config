@@ -182,7 +182,7 @@ Singleton {
                     root.processQueue();
                 }
 
-                const carriesPicture = (notification.image ?? "").startsWith("file://");
+                const carriesPicture = (notification.image ?? "").startsWith("file://") || (notification.appIcon ?? "").startsWith("file://");
                 if (notification.transient && !carriesPicture) {
                     notification.dismiss();
                 }
