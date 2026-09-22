@@ -24,6 +24,8 @@ Rectangle {
     readonly property var groupNotifications: group.notifications ?? []
     readonly property int count: groupNotifications.length
     readonly property var latestNotification: group.latestNotification ?? null
+    readonly property string appIcon: group?.appIcon ?? ""
+    property bool appIconUnavailable: false
 
     color: Foundations.palette.base02
     radius: Foundations.radius.s
@@ -64,13 +66,21 @@ Rectangle {
 
             // App icon
             Loader {
-                active: (root.group?.appIcon ?? "") !== ""
+                active: root.appIcon !== ""
                 Layout.preferredWidth: 20
                 Layout.preferredHeight: 20
 
                 sourceComponent: IconImage {
                     asynchronous: true
-                    source: Quickshell.iconPath(root.group?.appIcon ?? "")
+                    source: {
+                        if (root.appIconUnavailable)
+                            return Quickshell.iconPath(root.group?.appKey ?? "");
+                        return root.appIcon.startsWith("file://") ? root.appIcon : Quickshell.iconPath(root.appIcon);
+                    }
+                    onStatusChanged: {
+                        if (status === Image.Error && !root.appIconUnavailable)
+                            root.appIconUnavailable = true;
+                    }
                 }
             }
 

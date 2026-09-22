@@ -25,11 +25,16 @@ Rectangle {
     readonly property int imageDimension: 41
     readonly property int iconDimension: 20
 
-    readonly property string previewSource: root.image.startsWith("file://") ? root.image : (root.appIcon.startsWith("file://") ? root.appIcon : "")
+    readonly property bool appIconIsScreenshot: root.appIcon.startsWith("file://") && (notification.appName ?? "") === "niri"
+    readonly property string previewSource: root.image.startsWith("file://") ? root.image : (root.appIconIsScreenshot ? root.appIcon : "")
     readonly property bool hasPreview: previewSource !== ""
     readonly property int previewHeight: 160
+    property real previewAspect: 0
 
-    readonly property bool hasAppIcon: notification.appIcon !== "" && !hasPreview
+    property bool appIconUnavailable: false
+    property bool appIconBroken: false
+    readonly property string desktopEntry: notification.desktopEntry ?? ""
+    readonly property bool hasAppIcon: notification.appIcon !== "" && !hasPreview && !appIconBroken
     readonly property bool hasImage: notification.image !== "" && !hasPreview
     readonly property int nonAnimHeight: summaryView.implicitHeight + appNameRow.height + body.height + (previewLoader.active ? previewLoader.height + margin : 0) + (replyLoader.active ? replyLoader.height + margin : 0) + inner.anchors.margins * 2
 
@@ -157,7 +162,19 @@ Rectangle {
                         sourceComponent: IconImage {
                             anchors.fill: parent
                             asynchronous: true
-                            source: Quickshell.iconPath(root.appIcon)
+                            source: {
+                                if (root.appIconUnavailable)
+                                    return Quickshell.iconPath(root.desktopEntry);
+                                return root.appIcon.startsWith("file://") ? root.appIcon : Quickshell.iconPath(root.appIcon);
+                            }
+                            onStatusChanged: {
+                                if (status !== Image.Error)
+                                    return;
+                                if (!root.appIconUnavailable && root.desktopEntry !== "")
+                                    root.appIconUnavailable = true;
+                                else
+                                    root.appIconBroken = true;
+                            }
                         }
                     }
                     Loader {
@@ -220,7 +237,7 @@ Rectangle {
                 anchors.top: body.bottom
                 anchors.topMargin: active ? margin : 0
                 asynchronous: true
-                height: active ? root.previewHeight : 0
+                height: active ? (root.previewAspect > 0 ? Math.min(root.previewHeight, Math.round(width / root.previewAspect)) : root.previewHeight) : 0
                 visible: active
 
                 sourceComponent: ClippingRectangle {
@@ -230,9 +247,13 @@ Rectangle {
                         anchors.fill: parent
                         asynchronous: true
                         cache: false
-                        fillMode: Image.PreserveAspectCrop
+                        fillMode: Image.PreserveAspectFit
                         source: root.previewSource
                         sourceSize.height: root.previewHeight * 2
+                        onStatusChanged: {
+                            if (status === Image.Ready && implicitHeight > 0)
+                                root.previewAspect = implicitWidth / implicitHeight;
+                        }
                     }
                 }
             }

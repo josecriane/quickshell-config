@@ -20,10 +20,12 @@ Rectangle {
     readonly property int margin: Foundations.spacing.xs
     readonly property int imageDimension: 32
     readonly property int previewHeight: 120
+    property real previewAspect: 0
 
     readonly property string image: notification.image ?? ""
     readonly property string appIcon: notification.appIcon ?? ""
-    readonly property string previewSource: root.image.startsWith("file://") ? root.image : (root.appIcon.startsWith("file://") ? root.appIcon : "")
+    readonly property bool appIconIsScreenshot: root.appIcon.startsWith("file://") && (notification.appName ?? "") === "niri"
+    readonly property string previewSource: root.image.startsWith("file://") ? root.image : (root.appIconIsScreenshot ? root.appIcon : "")
     readonly property bool hasPreview: previewSource !== ""
     readonly property bool hasImage: image !== "" && !hasPreview
     readonly property string summary: notification.summary ?? ""
@@ -160,11 +162,12 @@ Rectangle {
                 }
             }
         }
-
         Loader {
+            id: compactPreview
+
             active: root.hasPreview
             Layout.fillWidth: true
-            Layout.preferredHeight: root.hasPreview ? root.previewHeight : 0
+            Layout.preferredHeight: root.hasPreview ? (root.previewAspect > 0 ? Math.min(root.previewHeight, Math.round(compactPreview.width / root.previewAspect)) : root.previewHeight) : 0
             asynchronous: true
 
             sourceComponent: ClippingRectangle {
@@ -174,9 +177,13 @@ Rectangle {
                     anchors.fill: parent
                     asynchronous: true
                     cache: false
-                    fillMode: Image.PreserveAspectCrop
+                    fillMode: Image.PreserveAspectFit
                     source: root.previewSource
                     sourceSize.height: root.previewHeight * 2
+                    onStatusChanged: {
+                        if (status === Image.Ready && implicitHeight > 0)
+                            root.previewAspect = implicitWidth / implicitHeight;
+                    }
                 }
             }
         }
