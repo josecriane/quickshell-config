@@ -120,6 +120,7 @@ Rectangle {
                 width: root.imageDimension
 
                 sourceComponent: ClippingRectangle {
+                    color: "transparent"
                     implicitHeight: root.imageDimension
                     implicitWidth: root.imageDimension
                     radius: Foundations.radius.all
@@ -241,6 +242,7 @@ Rectangle {
                 visible: active
 
                 sourceComponent: ClippingRectangle {
+                    color: "transparent"
                     radius: Foundations.radius.s
 
                     Image {

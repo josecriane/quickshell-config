@@ -75,6 +75,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignTop
 
                 sourceComponent: ClippingRectangle {
+                    color: "transparent"
                     radius: Foundations.radius.xs
 
                     Image {
@@ -171,6 +172,7 @@ Rectangle {
             asynchronous: true
 
             sourceComponent: ClippingRectangle {
+                color: "transparent"
                 radius: Foundations.radius.xs
 
                 Image {
