@@ -275,7 +275,7 @@
             sessionCommandsPath = mkPath "Path to session-commands.json (lock, reboot, poweroff).";
             interactiveCommandsPath = mkPath "Path to interactive-commands.json (calculator, base64, shell).";
             excludedAppsPath = mkPath "Path to excluded-apps.json (desktop entries hidden from the launcher).";
-            keepassPath = mkPath "Path to keepass.json (database, age identity and encrypted password).";
+            keepassPath = mkPath "Path to keepass.json (database and decrypted password file).";
 
             stylix = lib.mkOption {
               type = lib.types.nullOr (lib.types.attrsOf lib.types.anything);

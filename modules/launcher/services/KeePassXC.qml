@@ -10,8 +10,7 @@ Search {
 
     required property string prefix
 
-    readonly property string encryptedPasswordPath: ConfigsJson.keepass.encryptedPasswordPath
-    readonly property string ageIdentityPath: ConfigsJson.keepass.ageIdentityPath
+    readonly property string passwordPath: ConfigsJson.keepass.passwordPath
     readonly property string dbPath: ConfigsJson.keepass.databasePath
 
     readonly property string otpPrefix: prefix + "o "
@@ -29,7 +28,7 @@ Search {
     function search(search: string): list<var> {
         mode = modeFor(search);
         const isBare = search === prefix || search === otpPrefix || search === usernamePrefix;
-        if (isBare && encryptedPasswordPath && ageIdentityPath && dbPath) {
+        if (isBare && passwordPath && dbPath) {
             loadEntries();
         }
         const results = query(search);
@@ -54,26 +53,20 @@ Search {
 
     list: variants.instances
 
-    onEncryptedPasswordPathChanged: {
-        if (encryptedPasswordPath && ageIdentityPath && dbPath) {
-            loadEntries();
-        }
-    }
-
-    onAgeIdentityPathChanged: {
-        if (encryptedPasswordPath && ageIdentityPath && dbPath) {
+    onPasswordPathChanged: {
+        if (passwordPath && dbPath) {
             loadEntries();
         }
     }
 
     onDbPathChanged: {
-        if (encryptedPasswordPath && ageIdentityPath && dbPath) {
+        if (passwordPath && dbPath) {
             loadEntries();
         }
     }
 
     function loadEntries() {
-        entriesProcess.command = ["bash", "-c", `keepassxc-cli export -q -f csv "${dbPath}" < <(age -d -i "${ageIdentityPath}" "${encryptedPasswordPath}") | awk -F'","' 'NR>1 && $2 != "" { group=$1; title=$2; user=$3; totp=$7; gsub(/^"/, "", group); sub(/^\\//, "", group); sub(/^Root\\/?/, "", group); if (group != "" && group !~ /\\/$/) group = group "\\/"; print group title "\t" user "\t" (totp != "" ? "1" : "0") }'`];
+        entriesProcess.command = ["bash", "-c", `keepassxc-cli export -q -f csv "${dbPath}" < "${passwordPath}" | awk -F'","' 'NR>1 && $2 != "" { group=$1; title=$2; user=$3; totp=$7; gsub(/^"/, "", group); sub(/^\\//, "", group); sub(/^Root\\/?/, "", group); if (group != "" && group !~ /\\/$/) group = group "\\/"; print group title "\t" user "\t" (totp != "" ? "1" : "0") }'`];
         entriesProcess.running = true;
     }
 
@@ -108,9 +101,9 @@ Search {
                 if (root.mode === "username") {
                     Quickshell.execDetached(["wl-copy", "--", entryUsername]);
                 } else if (root.mode === "otp") {
-                    Quickshell.execDetached(["bash", "-c", `keepassxc-cli show -t -q "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n' | wl-copy --sensitive`]);
+                    Quickshell.execDetached(["bash", "-c", `keepassxc-cli show -t -q "${root.dbPath}" "${entryName}" < "${root.passwordPath}" | tr -d '\\n' | wl-copy --sensitive`]);
                 } else {
-                    Quickshell.execDetached(["bash", "-c", `keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" < <(age -d -i "${root.ageIdentityPath}" "${root.encryptedPasswordPath}") | tr -d '\\n' | wl-copy --sensitive`]);
+                    Quickshell.execDetached(["bash", "-c", `keepassxc-cli show -q -a password "${root.dbPath}" "${entryName}" < "${root.passwordPath}" | tr -d '\\n' | wl-copy --sensitive`]);
                 }
                 return true;
             }

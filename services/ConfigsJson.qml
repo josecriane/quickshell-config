@@ -65,8 +65,7 @@ Singleton {
         JsonAdapter {
             id: keepassAdapter
 
-            property string encryptedPasswordPath: ""
-            property string ageIdentityPath: ""
+            property string passwordPath: ""
             property string databasePath: ""
         }
     }
