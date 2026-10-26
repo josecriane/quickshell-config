@@ -69,7 +69,7 @@ Singleton {
 
     Process {
         id: connectProcess
-        command: ["pkexec", "sh", "-c", "tailscale up --accept-routes"]
+        command: ["tailscale", "up", "--accept-routes"]
         running: false
 
         onExited: {
@@ -89,7 +89,7 @@ Singleton {
 
     Process {
         id: disconnectProcess
-        command: ["pkexec", "sh", "-c", "tailscale down"]
+        command: ["tailscale", "down"]
         running: false
 
         onExited: {
